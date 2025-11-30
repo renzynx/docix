@@ -5,37 +5,39 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { BookOpen, Heart, Share2, ArrowDownUp } from "lucide-react";
-import { Doc } from "@convex/_generated/dataModel";
-import { useMutation, useQuery } from "convex/react";
+import { BookOpen, Heart, Share2, ArrowDownUp, Loader2 } from "lucide-react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "sonner";
 import { useState } from "react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
-type ChapterWithExtras = Doc<"chapters"> & {
-  pageCount?: number;
-};
-
-type SeriesWithChapters = Doc<"series"> & {
-  coverImageUrl: string | null;
-  genreNames: string[];
-  chapters: ChapterWithExtras[];
-};
-
 type SeriesDetailProps = {
-  data: SeriesWithChapters;
+  data: NonNullable<typeof api.series.getWithChapters._returnType>;
 };
 
-export const SeriesDetail = ({ data }: SeriesDetailProps) => {
-  const { chapters, ...series } = data;
+export const SeriesDetail = ({ data: series }: SeriesDetailProps) => {
   const [isAscending, setIsAscending] = useState(false);
 
-  // Favorites Logic
+  const {
+    results: chapters,
+    status,
+    loadMore,
+    isLoading,
+  } = usePaginatedQuery(
+    api.series.getPaginatedChapters,
+    {
+      seriesId: series._id,
+      order: isAscending ? "asc" : "desc",
+    },
+    { initialNumItems: 12 }
+  );
+
   const isFavorited = useQuery(api.series.getIsFavorited, {
     seriesId: series._id,
   });
-  const toggleFav = useMutation(api.series.toggleFavorite);
+
+  const toggleFav = useMutation(api.series.toggleFavorite as any);
 
   const handleToggleFavorite = async () => {
     try {
@@ -48,14 +50,6 @@ export const SeriesDetail = ({ data }: SeriesDetailProps) => {
     }
   };
 
-  if (!series) {
-    return (
-      <div className="py-12 text-center text-muted-foreground">
-        Series not found
-      </div>
-    );
-  }
-
   const getStatusColor = (statusValue: string) => {
     const colors = {
       ongoing: "bg-green-500/10 text-green-500 border-green-500/20",
@@ -66,26 +60,9 @@ export const SeriesDetail = ({ data }: SeriesDetailProps) => {
     return colors[statusValue as keyof typeof colors] || colors.ongoing;
   };
 
-  // Sorting chapters
-  const sortedChapters = [...(chapters || [])].sort((a, b) => {
-    return isAscending
-      ? a.chapterNumber - b.chapterNumber
-      : b.chapterNumber - a.chapterNumber;
-  });
-
-  // Find the actual first chapter (lowest number) for the "Start Reading" button
-  const firstChapter =
-    chapters && chapters.length > 0
-      ? chapters.reduce((prev, current) =>
-          prev.chapterNumber < current.chapterNumber ? prev : current
-        )
-      : null;
-
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* Hero / Header */}
       <div className="relative">
-        {/* Backdrop Blur Layer */}
         <div className="absolute inset-0 h-64 md:h-80 overflow-hidden rounded-xl -z-10">
           {series.coverImageUrl && (
             <>
@@ -100,7 +77,6 @@ export const SeriesDetail = ({ data }: SeriesDetailProps) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 pt-8 md:px-8">
-          {/* Cover Image */}
           <div className="relative group mx-auto md:mx-0 w-[200px] md:w-full">
             <div className="aspect-[2/3] bg-muted overflow-hidden rounded-xl shadow-2xl ring-1 ring-border/10">
               {series.coverImageUrl ? (
@@ -119,7 +95,6 @@ export const SeriesDetail = ({ data }: SeriesDetailProps) => {
             </div>
           </div>
 
-          {/* Details */}
           <div className="space-y-6 text-center md:text-left">
             <div className="space-y-2">
               <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight">
@@ -163,14 +138,14 @@ export const SeriesDetail = ({ data }: SeriesDetailProps) => {
             )}
 
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
-              {firstChapter && (
+              {series.firstChapter && (
                 <Button
                   asChild
                   size="lg"
                   className="h-11 px-8 shadow-lg shadow-primary/20"
                 >
                   <Link
-                    href={`/series/${series.slug}/chapter-${firstChapter.chapterNumber}`}
+                    href={`/series/${series.slug}/chapter-${series.firstChapter.chapterNumber}`}
                   >
                     <BookOpen className="mr-2 h-4 w-4" />
                     Start Reading
@@ -201,13 +176,12 @@ export const SeriesDetail = ({ data }: SeriesDetailProps) => {
         </div>
       </div>
 
-      {/* Chapters Section */}
       <div className="md:px-8 space-y-6">
         <div className="flex items-center justify-between border-b pb-4">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             Chapters
             <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {chapters?.length || 0}
+              {series.totalChapters || 0}
             </span>
           </h2>
           <Button
@@ -221,35 +195,50 @@ export const SeriesDetail = ({ data }: SeriesDetailProps) => {
           </Button>
         </div>
 
-        {sortedChapters && sortedChapters.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {sortedChapters.map((chapter) => (
+        {chapters.length > 0 ? (
+          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {chapters.map((chapter) => (
               <Link
                 key={chapter._id}
                 href={`/series/${series.slug}/chapter-${chapter.chapterNumber}`}
                 className="block group"
               >
-                <Card className="hover:bg-accent/50 transition-all duration-200 border-border/50 hover:border-border hover:shadow-sm">
-                  <div className="p-4 flex items-center justify-between gap-4">
-                    <div className="space-y-1 min-w-0">
-                      <div className="font-semibold truncate group-hover:text-primary transition-colors">
+                <div className="bg-card hover:bg-accent/50 transition-all duration-200 border-border/50 hover:border-border hover:shadow-sm rounded-lg">
+                  <div className="p-3 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
                         Chapter {chapter.chapterNumber}
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {chapter.title || `Chapter ${chapter.chapterNumber}`}
+                      <div className="text-xs text-muted-foreground truncate opacity-80">
+                        {formatRelativeTime(chapter._creationTime)}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground font-mono shrink-0">
-                      {formatRelativeTime(chapter._creationTime)}
-                    </div>
                   </div>
-                </Card>
+                </div>
               </Link>
             ))}
+          </div>
+        ) : isLoading ? (
+          <div className="py-20 flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <div className="py-20 text-center border-2 border-dashed rounded-xl">
             <p className="text-muted-foreground">No chapters released yet.</p>
+          </div>
+        )}
+
+        {status === "CanLoadMore" && (
+          <div className="flex justify-center pt-4">
+            <Button
+              variant="outline"
+              onClick={() => loadMore(12)}
+              disabled={isLoading}
+              className="w-full md:w-auto min-w-[200px]"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Load More Chapters
+            </Button>
           </div>
         )}
       </div>

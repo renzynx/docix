@@ -40,7 +40,7 @@ export default function RootLayout({
         >
           <ClerkProvider appearance={{ theme: shadcn }}>
             <ConvexClientProvider>{children}</ConvexClientProvider>
-            <Toaster richColors />
+            <Toaster richColors position="bottom-center" />
           </ClerkProvider>
         </ThemeProvider>
       </body>

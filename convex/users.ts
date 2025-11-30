@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import { isAdmin } from "./helpers";
-import { counter } from "./counter";
+import { usersAggregate } from "./aggregates";
 
 export const updateOrCreateUser = internalMutation({
   args: {
@@ -14,10 +14,11 @@ export const updateOrCreateUser = internalMutation({
       .unique();
 
     if (user === null) {
-      await ctx.db.insert("users", {
+      const userId = await ctx.db.insert("users", {
         clerkUserId: args.clerkUserId,
       });
-      await counter.inc(ctx, "users");
+      const newUser = await ctx.db.get(userId);
+      if (newUser) await usersAggregate.insert(ctx, newUser);
     } else {
       await ctx.db.patch(user._id, { clerkUserId: args.clerkUserId });
     }
@@ -34,7 +35,7 @@ export const deleteUser = internalMutation({
 
     if (user !== null) {
       await ctx.db.delete(user._id);
-      await counter.dec(ctx, "users");
+      await usersAggregate.delete(ctx, user);
     }
   },
 });
@@ -44,5 +45,11 @@ export const getAllUsers = query({
     await isAdmin(ctx);
 
     return await ctx.db.query("users").collect();
+  },
+});
+
+export const getCurrentUser = query({
+  handler: (ctx) => {
+    return ctx.auth.getUserIdentity();
   },
 });

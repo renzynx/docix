@@ -2,7 +2,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+  Home,
+  List,
+  Heart,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -15,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
+import type { Id } from "@convex/_generated/dataModel";
+import { useChapterViewTracking } from "@/hooks/use-chapter-view-tracking";
 
 type PageData = {
   _id: string;
@@ -26,6 +35,7 @@ type ReaderProps = {
   seriesSlug: string;
   seriesTitle: string;
   chapterNumber: number;
+  chapterId: Id<"chapters">;
   chapterTitle?: string;
   pages: PageData[];
   hasNextChapter?: boolean;
@@ -37,6 +47,7 @@ export const Reader = ({
   seriesSlug,
   seriesTitle,
   chapterNumber,
+  chapterId,
   chapterTitle,
   pages,
   hasNextChapter = false,
@@ -46,6 +57,8 @@ export const Reader = ({
   const [showControls, setShowControls] = useState(true);
   const router = useRouter();
 
+  useChapterViewTracking(chapterId);
+
   const toggleControls = () => setShowControls((prev) => !prev);
 
   const handleChapterChange = (value: string) => {
@@ -54,7 +67,6 @@ export const Reader = ({
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
-      {/* Top Navigation Bar - Slides in/out */}
       <header
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out",
@@ -63,8 +75,8 @@ export const Reader = ({
             : "-translate-y-full opacity-0 pointer-events-none"
         )}
       >
-        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border px-4 py-3">
-          <div className="container mx-auto max-w-5xl flex items-center justify-between gap-4">
+        <div className="bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 border-b border-border px-4 py-3">
+          <div className="mx-auto max-w-5xl flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 overflow-hidden">
               <Button
                 asChild
@@ -130,74 +142,109 @@ export const Reader = ({
       {/* Bottom Navigation Bar - Slides in/out */}
       <footer
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out",
+          "fixed bottom-6 left-0 right-0 z-50 transition-all duration-300 ease-in-out flex justify-center px-4 pointer-events-none",
           showControls
             ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0 pointer-events-none"
+            : "translate-y-16 opacity-0"
         )}
       >
-        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t border-border px-4 py-4 pb-8 sm:pb-4">
-          <div className="container mx-auto max-w-xl grid grid-cols-3 items-center gap-4">
+        <div className="pointer-events-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border border-border/50 shadow-xl rounded-xl p-2 flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar">
+          {/* Navigation Shortcuts */}
+          <div className="flex items-center gap-1 border-r border-border pr-2 mr-1">
             <Button
               asChild
-              variant="outline"
-              className={cn(
-                "justify-self-start w-full sm:w-auto",
-                !hasPrevChapter && "opacity-50 pointer-events-none"
-              )}
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
             >
-              <Link
-                href={
-                  hasPrevChapter
-                    ? `/series/${seriesSlug}/chapter-${chapterNumber - 1}`
-                    : "#"
-                }
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Previous
+              <Link href="/">
+                <Home className="h-4 w-4" />
+                <span className="sr-only">Home</span>
               </Link>
             </Button>
-
-            <div className="justify-self-center w-full max-w-[180px]">
-              <Select
-                value={chapterNumber.toString()}
-                onValueChange={handleChapterChange}
-              >
-                <SelectTrigger className="h-9 w-full">
-                  <SelectValue placeholder={`Ch. ${chapterNumber}`} />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {chapters.map((chapter) => (
-                    <SelectItem
-                      key={chapter._id}
-                      value={chapter.number.toString()}
-                    >
-                      Chapter {chapter.number}
-                      {chapter.title ? ` - ${chapter.title}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <Button
               asChild
-              variant="outline"
-              className={cn(
-                "justify-self-end w-full sm:w-auto",
-                !hasNextChapter && "opacity-50 pointer-events-none"
-              )}
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
             >
-              <Link
-                href={
-                  hasNextChapter
-                    ? `/series/${seriesSlug}/chapter-${chapterNumber + 1}`
-                    : "#"
-                }
-              >
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
+              <Link href={`/series/${seriesSlug}`}>
+                <List className="h-4 w-4" />
+                <span className="sr-only">Chapter List</span>
               </Link>
+            </Button>
+          </div>
+
+          {/* Previous Button */}
+          <Button
+            asChild
+            size="icon"
+            className={cn(
+              "h-9 w-9 border-0 shrink-0",
+              !hasPrevChapter && "opacity-50 pointer-events-none"
+            )}
+          >
+            <Link
+              href={
+                hasPrevChapter
+                  ? `/series/${seriesSlug}/chapter-${chapterNumber - 1}`
+                  : "#"
+              }
+            >
+              <ChevronLeft className="h-5 w-5" />
+              <span className="sr-only">Previous</span>
+            </Link>
+          </Button>
+
+          {/* Chapter Selector */}
+          <div className="w-[140px] sm:w-[180px] shrink-0">
+            <Select
+              value={chapterNumber.toString()}
+              onValueChange={handleChapterChange}
+            >
+              <SelectTrigger className="h-9 w-full justify-between px-3 bg-muted/50 border-transparent hover:bg-muted transition-colors">
+                <SelectValue placeholder={`Ch. ${chapterNumber}`} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {chapters.map((chapter) => (
+                  <SelectItem
+                    key={chapter._id}
+                    value={chapter.number.toString()}
+                  >
+                    Chapter {chapter.number}
+                    {chapter.title ? ` - ${chapter.title}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Next Button */}
+          <Button
+            asChild
+            size="icon"
+            className={cn(
+              "h-9 w-9 border-0 shrink-0",
+              !hasNextChapter && "opacity-50 pointer-events-none"
+            )}
+          >
+            <Link
+              href={
+                hasNextChapter
+                  ? `/series/${seriesSlug}/chapter-${chapterNumber + 1}`
+                  : "#"
+              }
+            >
+              <ChevronRight className="h-5 w-5" />
+              <span className="sr-only">Next</span>
+            </Link>
+          </Button>
+
+          {/* Follow Button */}
+          <div className="hidden sm:block border-l border-border pl-2 ml-1">
+            <Button className="h-9 border-0 gap-2 px-3">
+              <Heart className="h-4 w-4" />
+              <span>Follow</span>
             </Button>
           </div>
         </div>

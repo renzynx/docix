@@ -26,6 +26,8 @@ export default defineSchema({
     viewCount: v.optional(v.float64()),
   })
     .index("by_slug", ["slug"])
+    .index("by_updated_at", ["updatedAt"])
+    .index("by_genres", ["genres"])
     .searchIndex("search_series", {
       searchField: "searchableText",
       filterFields: ["status", "genres"],
@@ -35,6 +37,7 @@ export default defineSchema({
     seriesId: v.id("series"),
     chapterNumber: v.number(),
     title: v.optional(v.string()),
+    viewCount: v.optional(v.float64()),
   })
     .index("by_series_id", ["seriesId"])
     .index("by_series_id_and_number", ["seriesId", "chapterNumber"]),

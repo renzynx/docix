@@ -1,16 +1,5 @@
 "use client";
 
-import { UserButton, useUser } from "@clerk/nextjs";
-import { api } from "@convex/_generated/api";
-import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import { Search, ShieldUser } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import { ModeToggle } from "./mode-toggle";
-import { NotificationMenu } from "./notification-menu";
-import { SeriesSearchDialog } from "./series-search-dialog";
-import { Button } from "./ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -18,7 +7,28 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-} from "./ui/navigation-menu";
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+  DrawerClose,
+} from "@/components/ui/drawer";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import { api } from "@convex/_generated/api";
+import { Menu, Search, BookOpen, Hash, Shield } from "lucide-react";
+import { useState } from "react";
+import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { UserButton } from "@clerk/nextjs";
+import { ModeToggle } from "./mode-toggle";
+import { NotificationMenu } from "./notification-menu";
+import { SeriesSearchDialog } from "./series-search-dialog";
 import { Skeleton } from "./ui/skeleton";
 
 type NavbarProps = {
@@ -26,113 +36,254 @@ type NavbarProps = {
 };
 
 export const Navbar = ({ genres }: NavbarProps) => {
-  const { user } = useUser();
-  const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <nav className="w-full px-4 py-3 flex items-center justify-between border-b border-border/50 bg-background/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="flex items-center gap-6">
-        <Link href="/" className="font-bold text-xl">
-          Docix
-        </Link>
+    <>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center gap-4 px-4 mx-auto">
+          {/* Mobile Drawer Trigger */}
+          <div className="lg:hidden">
+            <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+              <DrawerTrigger asChild>
+                <Button variant="ghost" size="icon" className="-ml-2">
+                  <Menu className="size-5" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent className="max-h-[85vh]">
+                <DrawerHeader className="text-left border-b pb-4">
+                  <DrawerTitle className="font-bold flex items-center gap-2">
+                    <BookOpen className="size-5 text-primary" />
+                    Docix
+                  </DrawerTitle>
+                </DrawerHeader>
 
-        <NavigationMenu>
-          <NavigationMenuList>
-            <NavigationMenuItem>
-              <NavigationMenuTrigger>Genres</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <div className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                  {genres.map((genre) => (
-                    <NavigationMenuLink key={genre._id} asChild>
-                      <Link
-                        href={`/genre/${genre.slug}`}
-                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                <ScrollArea className="p-4 h-full overflow-y-auto">
+                  <div className="flex flex-col gap-6">
+                    {/* Mobile Search */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        Search
+                      </h4>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-muted-foreground"
+                        onClick={() => {
+                          setDrawerOpen(false);
+                          setSearchOpen(true);
+                        }}
                       >
-                        <div className="text-sm font-medium leading-none">
-                          {genre.name}
+                        <Search className="mr-2 size-4" />
+                        Search series...
+                      </Button>
+                    </div>
+
+                    {/* Mobile Browse */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        Browse
+                      </h4>
+                      <DrawerClose asChild>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <Link href="/series">
+                            <BookOpen className="mr-2 size-4" />
+                            All Series
+                          </Link>
+                        </Button>
+                      </DrawerClose>
+                    </div>
+
+                    {/* Mobile Genres */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        Genres
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {genres.map((genre) => (
+                          <DrawerClose key={genre._id} asChild>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              className="justify-start h-auto py-2"
+                              size="sm"
+                            >
+                              <Link href={`/genre/${genre.slug}`}>
+                                <Hash className="mr-2 size-3 text-muted-foreground" />
+                                <span className="truncate">{genre.name}</span>
+                              </Link>
+                            </Button>
+                          </DrawerClose>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-border my-2" />
+
+                    {/* Mobile Account */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Theme</span>
+                        <ModeToggle />
+                      </div>
+
+                      <Authenticated>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            Notifications
+                          </span>
+                          <NotificationMenu />
                         </div>
-                        {genre.description && (
-                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                            {genre.description}
-                          </p>
-                        )}
-                      </Link>
-                    </NavigationMenuLink>
-                  ))}
-                </div>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-sm font-medium">Account</span>
+                          <UserButton>
+                            <UserButton.MenuItems>
+                              <UserButton.Link
+                                label="Management"
+                                labelIcon={<Shield size={16} />}
+                                href="/admin"
+                              />
+                            </UserButton.MenuItems>
+                          </UserButton>
+                        </div>
+                      </Authenticated>
 
-            <NavigationMenuItem>
-              <NavigationMenuLink
-                asChild
-                className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                      <Unauthenticated>
+                        <div className="grid grid-cols-2 gap-2">
+                          <DrawerClose asChild>
+                            <Button asChild variant="outline">
+                              <Link href="/sign-in">Sign In</Link>
+                            </Button>
+                          </DrawerClose>
+                          <DrawerClose asChild>
+                            <Button asChild>
+                              <Link href="/sign-up">Sign Up</Link>
+                            </Button>
+                          </DrawerClose>
+                        </div>
+                      </Unauthenticated>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </DrawerContent>
+            </Drawer>
+          </div>
+
+          {/* Logo */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 font-bold text-lg mr-4"
+          >
+            <BookOpen className="size-5 text-primary hidden md:block" />
+            <span>Docix</span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex flex-1 items-center gap-4">
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuLink
+                    href="/series"
+                    className={navigationMenuTriggerStyle()}
+                  >
+                    All Series
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger>Genres</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                      {genres.map((genre) => (
+                        <NavigationMenuLink key={genre._id} asChild>
+                          <Link
+                            href={`/genre/${genre.slug}`}
+                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          >
+                            <div className="text-sm font-medium leading-none">
+                              {genre.name}
+                            </div>
+                            {genre.description && (
+                              <p className="line-clamp-2 text-sm leading-snug text-muted-foreground mt-1">
+                                {genre.description}
+                              </p>
+                            )}
+                          </Link>
+                        </NavigationMenuLink>
+                      ))}
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+
+            {/* Desktop Search */}
+            <div className="flex-1 max-w-sm ml-auto">
+              <Button
+                variant="outline"
+                className="w-full justify-start text-muted-foreground bg-muted/50"
+                onClick={() => setSearchOpen(true)}
               >
-                <Link href="/series">Browse</Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-          </NavigationMenuList>
-        </NavigationMenu>
-      </div>
+                <Search className="mr-2 size-4" />
+                <span>Search series...</span>
+                <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
+            </div>
+          </div>
 
-      <div className="max-w-md w-full lg:block hidden">
-        <InputGroup>
-          <InputGroupInput
-            placeholder="Search..."
-            readOnly
-            onFocus={() => setOpen(true)}
-          />
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-        </InputGroup>
-        <SeriesSearchDialog open={open} setOpen={setOpen} />
-      </div>
+          {/* Desktop Right Actions */}
+          <div className="flex items-center gap-2 ml-auto lg:ml-0">
+            {/* Mobile Search Icon Trigger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="size-5" />
+            </Button>
 
-      <div className="flex gap-4 items-center">
-        <Button
-          className="lg:hidden"
-          variant="ghost"
-          size="icon"
-          onClick={() => setOpen(true)}
-        >
-          <Search />
-        </Button>
+            <div className="hidden lg:flex items-center gap-2">
+              <ModeToggle />
 
-        <Authenticated>
-          <NotificationMenu />
-        </Authenticated>
+              <Authenticated>
+                <NotificationMenu />
+                <UserButton>
+                  <UserButton.MenuItems>
+                    <UserButton.Link
+                      label="Management"
+                      labelIcon={<Shield size={16} />}
+                      href="/admin"
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
+              </Authenticated>
 
-        <ModeToggle />
+              <Unauthenticated>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/sign-in">Sign In</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/sign-up">Sign Up</Link>
+                </Button>
+              </Unauthenticated>
 
-        <Unauthenticated>
-          <Button asChild variant="outline">
-            <Link href="/sign-in">Sign In</Link>
-          </Button>
+              <AuthLoading>
+                <Skeleton className="h-8 w-8 rounded-full" />
+              </AuthLoading>
+            </div>
+          </div>
+        </div>
+      </header>
 
-          <Button asChild>
-            <Link href="/sign-up">Sign Up</Link>
-          </Button>
-        </Unauthenticated>
-
-        <AuthLoading>
-          <Skeleton className="w-8 h-8 rounded-full" />
-        </AuthLoading>
-
-        <Authenticated>
-          <UserButton>
-            {user?.publicMetadata.role === "admin" && (
-              <UserButton.MenuItems>
-                <UserButton.Link
-                  label="Management"
-                  labelIcon={<ShieldUser size={16} />}
-                  href="/admin"
-                />
-              </UserButton.MenuItems>
-            )}
-          </UserButton>
-        </Authenticated>
-      </div>
-    </nav>
+      <SeriesSearchDialog open={searchOpen} setOpen={setSearchOpen} />
+    </>
   );
 };

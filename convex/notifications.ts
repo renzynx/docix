@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { isAuth, isAdmin } from "./helpers";
-import { counter } from "./counter";
+import { notificationsAggregate } from "./aggregates";
 
 export const getUserNotifications = query({
   args: {
@@ -121,8 +121,8 @@ export const deleteNotification = mutation({
 
     await ctx.db.delete(args.notificationId);
 
-    // Decrement notifications counter
-    await counter.dec(ctx, "notifications");
+    // Decrement notifications aggregate
+    await notificationsAggregate.delete(ctx, notification);
   },
 });
 
@@ -187,8 +187,9 @@ export const createNotification = mutation({
       isRead: false,
     });
 
-    // Increment notifications counter
-    await counter.inc(ctx, "notifications");
+    // Increment notifications aggregate
+    const notification = await ctx.db.get(notificationId);
+    if (notification) await notificationsAggregate.insert(ctx, notification);
 
     return notificationId;
   },

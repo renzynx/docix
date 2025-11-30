@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { generateSlug, isAdmin } from "./helpers";
-import { counter } from "./counter";
+import { genresAggregate } from "./aggregates";
 
 export const getAllGenres = query({
   handler: async (ctx) => {
@@ -57,8 +57,9 @@ export const createGenre = mutation({
       description: args.description,
     });
 
-    // Increment genres counter
-    await counter.inc(ctx, "genres");
+    // Increment genres aggregate
+    const genre = await ctx.db.get(genreId);
+    if (genre) await genresAggregate.insert(ctx, genre);
 
     return genreId;
   },
@@ -127,8 +128,8 @@ export const deleteGenre = mutation({
 
     await ctx.db.delete(args.id);
 
-    // Decrement genres counter
-    await counter.dec(ctx, "genres");
+    // Decrement genres aggregate
+    await genresAggregate.delete(ctx, genre);
 
     return args.id;
   },

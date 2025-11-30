@@ -15,7 +15,14 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Eye, FileText, Search, Loader2 } from "lucide-react";
+import {
+  Eye,
+  FileText,
+  Search,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { api } from "@convex/_generated/api";
 import { useState, useMemo } from "react";
 import { formatRelativeTime } from "@/lib/utils";
@@ -27,26 +34,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Preloaded, usePreloadedQuery } from "convex/react";
 
-type Chapter =
-  (typeof api.chapters.getAllChaptersAcrossSeries)["_returnType"]["page"][0];
+const ITEMS_PER_PAGE = 20;
 
 export const AllChaptersTable = ({
-  chapters,
-  loadMore,
-  status,
+  preloadedChapters,
 }: {
-  chapters: Chapter[];
-  loadMore: (numItems: number) => void;
-  status: "CanLoadMore" | "LoadingMore" | "Exhausted" | "LoadingFirstPage";
+  preloadedChapters: Preloaded<typeof api.chapters.getAllChaptersAcrossSeries>;
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [seriesFilter, setSeriesFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const { page: chapters, totalCount } = usePreloadedQuery(preloadedChapters);
 
   // Get unique series for filter
   const uniqueSeries = useMemo(() => {
     if (!chapters) return [];
     const seriesMap = new Map<string, string>();
+    // Note: This relies on all chapters being loaded for filter generation
     chapters.forEach((chapter) => {
       if (!seriesMap.has(chapter.seriesSlug)) {
         seriesMap.set(chapter.seriesSlug, chapter.seriesTitle);
@@ -81,8 +87,43 @@ export const AllChaptersTable = ({
       );
     }
 
+    // Reset page to 1 if filters change and current page is invalid
+    if (
+      currentPage > 1 &&
+      filtered.length <= (currentPage - 1) * ITEMS_PER_PAGE
+    ) {
+      setCurrentPage(1);
+    }
+
     return filtered;
-  }, [chapters, searchQuery, seriesFilter]);
+  }, [chapters, searchQuery, seriesFilter, currentPage]);
+
+  const totalFilteredItems = filteredChapters.length;
+  const totalPages = Math.ceil(totalFilteredItems / ITEMS_PER_PAGE);
+
+  // Apply Pagination Slicing
+  const paginatedChapters = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return filteredChapters.slice(start, end);
+  }, [filteredChapters, currentPage]);
+
+  // Helper function to generate visible page numbers
+  const getPageNumbers = () => {
+    const maxPagesToShow = 5;
+    const pages = [];
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
 
   if (!chapters || chapters.length === 0) {
     return (
@@ -91,9 +132,6 @@ export const AllChaptersTable = ({
       </div>
     );
   }
-
-  const canLoadMore = status === "CanLoadMore";
-  const isLoadingMore = status === "LoadingMore";
 
   return (
     <div className="space-y-4">
@@ -104,11 +142,20 @@ export const AllChaptersTable = ({
           <Input
             placeholder="Search by chapter title, number, or series..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1); // Reset page on search change
+            }}
             className="pl-9"
           />
         </div>
-        <Select value={seriesFilter} onValueChange={setSeriesFilter}>
+        <Select
+          value={seriesFilter}
+          onValueChange={(slug) => {
+            setSeriesFilter(slug);
+            setCurrentPage(1); // Reset page on filter change
+          }}
+        >
           <SelectTrigger className="w-full sm:w-[250px]">
             <SelectValue placeholder="Filter by series" />
           </SelectTrigger>
@@ -125,16 +172,11 @@ export const AllChaptersTable = ({
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground">
-        {filteredChapters.length === chapters.length ? (
-          <span>
-            Showing {chapters.length} chapter{chapters.length !== 1 ? "s" : ""}
-            {canLoadMore && " (more available)"}
-          </span>
-        ) : (
-          <span>
-            Showing {filteredChapters.length} of {chapters.length} loaded
-            chapters
-          </span>
+        Showing {paginatedChapters.length} of {totalFilteredItems} result
+        {totalFilteredItems !== 1 ? "s" : ""}
+        {totalFilteredItems > 0 && ` (Page ${currentPage} of ${totalPages})`}
+        {totalCount && searchQuery === "" && seriesFilter === "all" && (
+          <span className="ml-2">· Total chapters: {totalCount}</span>
         )}
       </div>
 
@@ -156,7 +198,7 @@ export const AllChaptersTable = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredChapters.map((chapter) => (
+              {paginatedChapters.map((chapter) => (
                 <TableRow key={chapter._id}>
                   <TableCell>
                     <Link
@@ -216,30 +258,45 @@ export const AllChaptersTable = ({
         </div>
       )}
 
-      {/* Load More Button */}
-      {canLoadMore && !searchQuery && seriesFilter === "all" && (
-        <div className="flex justify-center pt-4">
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center space-x-2 pt-4">
           <Button
             variant="outline"
-            onClick={() => loadMore(50)}
-            disabled={isLoadingMore}
-            className="min-w-[200px]"
+            size="icon"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
           >
-            {isLoadingMore ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading...
-              </>
-            ) : (
-              "Load More Chapters"
-            )}
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-        </div>
-      )}
 
-      {status === "Exhausted" && chapters.length > 20 && (
-        <div className="text-sm text-center text-muted-foreground py-4">
-          All chapters loaded ({chapters.length} total)
+          {getPageNumbers().map((page) => (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCurrentPage(page)}
+            >
+              {page}
+            </Button>
+          ))}
+
+          {totalPages > getPageNumbers()[getPageNumbers().length - 1] && (
+            <Button variant="ghost" size="sm" disabled>
+              ...
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+            }
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </div>

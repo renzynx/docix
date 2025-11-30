@@ -9,8 +9,8 @@ import { Skeleton } from "../ui/skeleton";
 
 export const AdminHeader = () => {
   return (
-    <nav>
-      <div className="flex items-center justify-between gap-4 p-4 border-b">
+    <nav className="border-b sticky top-0 z-40 backdrop-blur-2xl">
+      <div className="flex items-center justify-between gap-4 p-4">
         <SidebarTrigger />
 
         <div className="flex items-center gap-4">

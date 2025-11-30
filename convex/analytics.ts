@@ -1,133 +1,133 @@
 import { query } from "./_generated/server";
-import { counter } from "./counter";
+import {
+  seriesAggregate,
+  usersAggregate,
+  chaptersAggregate,
+  pagesAggregate,
+  favoritesAggregate,
+  genresAggregate,
+  notificationsAggregate,
+} from "./aggregates";
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const getAllAnalytics = query({
   handler: async (ctx) => {
-    const [
-      seriesCount,
-      usersCount,
-      chaptersCount,
-      pagesCount,
-      favoritesCount,
-      genresCount,
-      notificationsCount,
-    ] = await Promise.all([
-      counter.count(ctx, "series"),
-      counter.count(ctx, "users"),
-      counter.count(ctx, "chapters"),
-      counter.count(ctx, "pages"),
-      counter.count(ctx, "favorites"),
-      counter.count(ctx, "genres"),
-      counter.count(ctx, "notifications"),
-    ]);
+    const now = Date.now();
+    const thirtyDaysAgo = now - THIRTY_DAYS_MS;
+
+    // Helper to get Total + Growth
+    const getStats = async (agg: any) => {
+      const [total, recent] = await Promise.all([
+        agg.count(ctx),
+        agg.count(ctx, {
+          bounds: { lower: { key: thirtyDaysAgo, inclusive: true } },
+        }),
+      ]);
+      return { total, growth: recent };
+    };
+
+    const [series, users, chapters, pages, favorites, genres, notifications] =
+      await Promise.all([
+        getStats(seriesAggregate),
+        getStats(usersAggregate),
+        getStats(chaptersAggregate),
+        getStats(pagesAggregate),
+        getStats(favoritesAggregate),
+        getStats(genresAggregate),
+        getStats(notificationsAggregate),
+      ]);
 
     return {
-      series: seriesCount,
-      users: usersCount,
-      chapters: chaptersCount,
-      pages: pagesCount,
-      favorites: favoritesCount,
-      genres: genresCount,
-      notifications: notificationsCount,
-      // Calculate some derived metrics
+      series,
+      users,
+      chapters,
+      pages,
+      favorites,
+      genres,
+      notifications,
+      // Derived
       averageChaptersPerSeries:
-        seriesCount > 0 ? chaptersCount / seriesCount : 0,
+        series.total > 0 ? chapters.total / series.total : 0,
       averagePagesPerChapter:
-        chaptersCount > 0 ? pagesCount / chaptersCount : 0,
+        chapters.total > 0 ? pages.total / chapters.total : 0,
       averageFavoritesPerSeries:
-        seriesCount > 0 ? favoritesCount / seriesCount : 0,
+        series.total > 0 ? favorites.total / series.total : 0,
     };
   },
 });
 
-/**
- * Individual counter queries for specific metrics
- */
-
-export const getTotalUsers = query({
-  handler: async (ctx) => {
-    return await counter.count(ctx, "users");
-  },
-});
-
-export const getTotalChapters = query({
-  handler: async (ctx) => {
-    return await counter.count(ctx, "chapters");
-  },
-});
-
-export const getTotalPages = query({
-  handler: async (ctx) => {
-    return await counter.count(ctx, "pages");
-  },
-});
-
-export const getTotalFavorites = query({
-  handler: async (ctx) => {
-    return await counter.count(ctx, "favorites");
-  },
-});
-
-export const getTotalGenres = query({
-  handler: async (ctx) => {
-    return await counter.count(ctx, "genres");
-  },
-});
-
-export const getTotalNotifications = query({
-  handler: async (ctx) => {
-    return await counter.count(ctx, "notifications");
-  },
-});
-
-/**
- * Get analytics summary with growth metrics
- */
 export const getAnalyticsSummary = query({
   handler: async (ctx) => {
-    const [
-      seriesCount,
-      usersCount,
-      chaptersCount,
-      pagesCount,
-      favoritesCount,
-      notificationsCount,
-      genresCount,
-    ] = await Promise.all([
-      counter.count(ctx, "series"),
-      counter.count(ctx, "users"),
-      counter.count(ctx, "chapters"),
-      counter.count(ctx, "pages"),
-      counter.count(ctx, "favorites"),
-      counter.count(ctx, "notifications"),
-      counter.count(ctx, "genres"),
-    ]);
+    const now = Date.now();
+    const thirtyDaysAgo = now - THIRTY_DAYS_MS;
 
-    // Calculate derived metrics
-    const averageChaptersPerSeries =
-      seriesCount > 0 ? chaptersCount / seriesCount : 0;
-    const averagePagesPerChapter =
-      chaptersCount > 0 ? pagesCount / chaptersCount : 0;
-    const averageFavoritesPerSeries =
-      seriesCount > 0 ? favoritesCount / seriesCount : 0;
+    // Helper
+    const getStats = async (agg: any) => {
+      const [total, recent] = await Promise.all([
+        agg.count(ctx),
+        agg.count(ctx, {
+          bounds: { lower: { key: thirtyDaysAgo, inclusive: true } },
+        }),
+      ]);
+      return { total, growth: recent };
+    };
+
+    const [series, users, chapters, pages, favorites, notifications, genres] =
+      await Promise.all([
+        getStats(seriesAggregate),
+        getStats(usersAggregate),
+        getStats(chaptersAggregate),
+        getStats(pagesAggregate),
+        getStats(favoritesAggregate),
+        getStats(notificationsAggregate),
+        getStats(genresAggregate),
+      ]);
 
     return {
       overview: {
-        totalSeries: seriesCount,
-        totalUsers: usersCount,
-        totalChapters: chaptersCount,
-        totalPages: pagesCount,
+        totalSeries: series.total,
+        seriesGrowth: series.growth,
+        totalUsers: users.total,
+        usersGrowth: users.growth,
+        totalChapters: chapters.total,
+        chaptersGrowth: chapters.growth,
+        totalPages: pages.total,
+        pagesGrowth: pages.growth,
       },
       engagement: {
-        totalFavorites: favoritesCount,
-        totalNotifications: notificationsCount,
-        averageFavoritesPerSeries,
+        totalFavorites: favorites.total,
+        favoritesGrowth: favorites.growth,
+        totalNotifications: notifications.total,
+        averageFavoritesPerSeries:
+          series.total > 0 ? favorites.total / series.total : 0,
       },
       content: {
-        totalGenres: genresCount,
-        averageChaptersPerSeries,
-        averagePagesPerChapter,
+        totalGenres: genres.total,
+        averageChaptersPerSeries:
+          series.total > 0 ? chapters.total / series.total : 0,
+        averagePagesPerChapter:
+          chapters.total > 0 ? pages.total / chapters.total : 0,
       },
     };
   },
+});
+
+export const getTotalUsers = query({
+  handler: async (ctx) => await usersAggregate.count(ctx),
+});
+export const getTotalChapters = query({
+  handler: async (ctx) => await chaptersAggregate.count(ctx),
+});
+export const getTotalPages = query({
+  handler: async (ctx) => await pagesAggregate.count(ctx),
+});
+export const getTotalFavorites = query({
+  handler: async (ctx) => await favoritesAggregate.count(ctx),
+});
+export const getTotalGenres = query({
+  handler: async (ctx) => await genresAggregate.count(ctx),
+});
+export const getTotalNotifications = query({
+  handler: async (ctx) => await notificationsAggregate.count(ctx),
 });

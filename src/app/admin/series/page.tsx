@@ -11,6 +11,12 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { fetchQuery } from "convex/nextjs";
 import { SeriesList } from "@/components/admin/series/series-list";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin | Series Management",
+  description: "Manage all manga/comic series in the admin panel.",
+};
 
 export default async function SeriesPage() {
   const paginatedResult = await fetchQuery(api.series.getAllSeries, {

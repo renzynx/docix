@@ -2,9 +2,24 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { StatsCard } from "@/components/analytics/stats-card";
-import { Loader2, BookOpen, Users, FileText, Layers, Heart, Bell, Tag } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatsCard } from "@/components/admin/analytics/stats-card";
+import {
+  Loader2,
+  BookOpen,
+  Users,
+  FileText,
+  Layers,
+  Heart,
+  Bell,
+  Tag,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function AnalyticsDashboard() {
   const analytics = useQuery(api.analytics.getAllAnalytics);
@@ -18,6 +33,11 @@ export function AnalyticsDashboard() {
     );
   }
 
+  // Helper to format growth string
+  const getGrowthLabel = (growth: number) => {
+    return growth > 0 ? `+${growth} in last 30 days` : "No change in 30 days";
+  };
+
   return (
     <div className="space-y-8">
       {/* Overview Stats */}
@@ -26,26 +46,26 @@ export function AnalyticsDashboard() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Total Series"
-            value={analytics.series}
-            description="Manga & Comics"
+            value={analytics.series.total}
+            description={getGrowthLabel(analytics.series.growth)}
             icon={BookOpen}
           />
           <StatsCard
             title="Total Users"
-            value={analytics.users}
-            description="Registered users"
+            value={analytics.users.total}
+            description={getGrowthLabel(analytics.users.growth)}
             icon={Users}
           />
           <StatsCard
             title="Total Chapters"
-            value={analytics.chapters}
-            description="Published chapters"
+            value={analytics.chapters.total}
+            description={getGrowthLabel(analytics.chapters.growth)}
             icon={FileText}
           />
           <StatsCard
             title="Total Pages"
-            value={analytics.pages}
-            description="Content pages"
+            value={analytics.pages.total}
+            description={getGrowthLabel(analytics.pages.growth)}
             icon={Layers}
           />
         </div>
@@ -57,20 +77,20 @@ export function AnalyticsDashboard() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <StatsCard
             title="Total Favorites"
-            value={analytics.favorites}
-            description="Series bookmarked"
+            value={analytics.favorites.total}
+            description={getGrowthLabel(analytics.favorites.growth)}
             icon={Heart}
           />
           <StatsCard
             title="Notifications"
-            value={analytics.notifications}
-            description="System notifications"
+            value={analytics.notifications.total}
+            description={getGrowthLabel(analytics.notifications.growth)}
             icon={Bell}
           />
           <StatsCard
             title="Genres"
-            value={analytics.genres}
-            description="Content categories"
+            value={analytics.genres.total}
+            description={getGrowthLabel(analytics.genres.growth)}
             icon={Tag}
           />
         </div>
@@ -92,7 +112,8 @@ export function AnalyticsDashboard() {
                 {analytics.averageChaptersPerSeries.toFixed(1)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {analytics.chapters} chapters / {analytics.series} series
+                {analytics.chapters.total} chapters / {analytics.series.total}{" "}
+                series
               </p>
             </CardContent>
           </Card>
@@ -109,7 +130,8 @@ export function AnalyticsDashboard() {
                 {analytics.averagePagesPerChapter.toFixed(1)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {analytics.pages} pages / {analytics.chapters} chapters
+                {analytics.pages.total} pages / {analytics.chapters.total}{" "}
+                chapters
               </p>
             </CardContent>
           </Card>
@@ -126,7 +148,8 @@ export function AnalyticsDashboard() {
                 {analytics.averageFavoritesPerSeries.toFixed(1)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {analytics.favorites} favorites / {analytics.series} series
+                {analytics.favorites.total} favorites / {analytics.series.total}{" "}
+                series
               </p>
             </CardContent>
           </Card>
@@ -143,29 +166,49 @@ export function AnalyticsDashboard() {
               <CardDescription>Total content statistics</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Series</span>
-                <span className="text-sm font-medium">
-                  {summary.overview.totalSeries.toLocaleString()}
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-medium block">
+                    {summary.overview.totalSeries.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-green-500">
+                    +{summary.overview.seriesGrowth} new
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Users</span>
-                <span className="text-sm font-medium">
-                  {summary.overview.totalUsers.toLocaleString()}
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-medium block">
+                    {summary.overview.totalUsers.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-green-500">
+                    +{summary.overview.usersGrowth} new
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Chapters</span>
-                <span className="text-sm font-medium">
-                  {summary.overview.totalChapters.toLocaleString()}
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-medium block">
+                    {summary.overview.totalChapters.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-green-500">
+                    +{summary.overview.chaptersGrowth} new
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Pages</span>
-                <span className="text-sm font-medium">
-                  {summary.overview.totalPages.toLocaleString()}
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-medium block">
+                    {summary.overview.totalPages.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-green-500">
+                    +{summary.overview.pagesGrowth} new
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -176,13 +219,18 @@ export function AnalyticsDashboard() {
               <CardDescription>Activity metrics</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Favorites</span>
-                <span className="text-sm font-medium">
-                  {summary.engagement.totalFavorites.toLocaleString()}
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-medium block">
+                    {summary.engagement.totalFavorites.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-green-500">
+                    +{summary.engagement.favoritesGrowth} recent
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">
                   Notifications
                 </span>
@@ -190,7 +238,7 @@ export function AnalyticsDashboard() {
                   {summary.engagement.totalNotifications.toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">
                   Avg. Favorites
                 </span>

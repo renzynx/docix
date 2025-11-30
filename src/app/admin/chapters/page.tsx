@@ -1,30 +1,24 @@
-"use client";
-
 import { AllChaptersTable } from "@/components/admin/chapters/all-chapters-table";
+import { AllChaptersTableSkeleton } from "@/components/admin/chapters/all-chapters-table-skeleton";
+import { ConvexAuthLoading } from "@/components/convex-auth-loading";
+import { auth } from "@clerk/nextjs/server";
 import { api } from "@convex/_generated/api";
-import { usePaginatedQuery } from "convex/react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { preloadQuery } from "convex/nextjs";
+import { Metadata } from "next";
 
-function AllChaptersTableSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-4">
-        <Skeleton className="h-10 flex-1" />
-        <Skeleton className="h-10 w-[250px]" />
-      </div>
-      <Skeleton className="h-[400px] w-full" />
-    </div>
-  );
-}
+export const metadata: Metadata = {
+  title: "Admin | Chapters Management",
+  description: "Manage all manga/comic chapters in the admin panel.",
+};
 
-export default function AdminChaptersPage() {
-  const { results, status, loadMore } = usePaginatedQuery(
+export default async function AdminChaptersPage() {
+  const token =
+    (await (await auth()).getToken({ template: "convex" })) ?? undefined;
+  const preloadedChapters = await preloadQuery(
     api.chapters.getAllChaptersAcrossSeries,
-    {},
-    { initialNumItems: 50 }
+    { limit: 50 },
+    { token }
   );
-
-  const isLoadingFirstPage = status === "LoadingFirstPage";
 
   return (
     <div className="space-y-6">
@@ -35,15 +29,9 @@ export default function AdminChaptersPage() {
         </p>
       </div>
 
-      {isLoadingFirstPage ? (
-        <AllChaptersTableSkeleton />
-      ) : (
-        <AllChaptersTable
-          chapters={results}
-          loadMore={loadMore}
-          status={status}
-        />
-      )}
+      <ConvexAuthLoading fallback={<AllChaptersTableSkeleton />}>
+        <AllChaptersTable preloadedChapters={preloadedChapters} />
+      </ConvexAuthLoading>
     </div>
   );
 }

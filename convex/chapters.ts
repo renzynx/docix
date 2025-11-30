@@ -1,6 +1,11 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { isAuth, isAdmin } from "./helpers";
+import {
+  chaptersAggregate,
+  chaptersBySeries,
+  pagesAggregate,
+} from "./aggregates";
 import { counter } from "./counter";
 
 export const getAllChapters = query({
@@ -42,13 +47,11 @@ export const getChapterById = query({
       return null;
     }
 
-    // Get all pages for the chapter
     const pages = await ctx.db
       .query("pages")
       .withIndex("by_chapter_id", (q) => q.eq("chapterId", args.id))
       .collect();
 
-    // Sort pages by pageNumber
     pages.sort((a, b) => a.pageNumber - b.pageNumber);
 
     const pagesWithUrls = await Promise.all(
@@ -90,9 +93,6 @@ export const getPreviousChapter = query({
     currentChapterNumber: v.number(),
   },
   handler: async (ctx, args) => {
-    // Find the chapter with the next lowest number
-    // Since we can't easily sort in reverse with filter, we'll fetch all chapters
-    // and find the one immediately preceding
     const chapters = await ctx.db
       .query("chapters")
       .withIndex("by_series_id_and_number", (q) =>
@@ -100,11 +100,8 @@ export const getPreviousChapter = query({
       )
       .collect();
 
-    // Sort by chapter number ascending
     chapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
 
-    // Find the index of current chapter (or where it would be)
-    // We want the chapter with largest number that is still less than current
     let prevChapter = null;
     for (const chapter of chapters) {
       if (chapter.chapterNumber < args.currentChapterNumber) {
@@ -181,8 +178,14 @@ export const createChapter = mutation({
       title: args.title,
     });
 
-    // Increment the chapters counter for analytics
-    await counter.inc(ctx, "chapters");
+    // UPDATE AGGREGATES
+    const chapter = await ctx.db.get(chapterId);
+    if (chapter) {
+      // 1. Update global chapter count
+      await chaptersAggregate.insert(ctx, chapter);
+      // 2. Update per-series chapter count
+      await chaptersBySeries.insert(ctx, chapter);
+    }
 
     await ctx.db.patch(args.seriesId, { updatedAt: Date.now() });
 
@@ -205,8 +208,11 @@ export const addPage = mutation({
       storageId: args.storageId,
     });
 
-    // Increment the pages counter for analytics
-    await counter.inc(ctx, "pages");
+    // UPDATE AGGREGATE
+    const page = await ctx.db.get(pageId);
+    if (page) {
+      await pagesAggregate.insert(ctx, page);
+    }
 
     return pageId;
   },
@@ -245,6 +251,19 @@ export const updateChapter = mutation({
       }
     }
 
+    // Aggregates: Since `chaptersBySeries` uses `chapterNumber` as the sort key,
+    // we must replace the entry in the aggregate if the number changes.
+    if (
+      args.chapterNumber !== undefined &&
+      args.chapterNumber !== chapter.chapterNumber
+    ) {
+      const updatedChapterDoc = {
+        ...chapter,
+        chapterNumber: args.chapterNumber,
+      };
+      await chaptersBySeries.replace(ctx, chapter, updatedChapterDoc);
+    }
+
     await ctx.db.patch(args.id, {
       ...(args.chapterNumber !== undefined && {
         chapterNumber: args.chapterNumber,
@@ -256,9 +275,6 @@ export const updateChapter = mutation({
   },
 });
 
-/**
- * Delete a page from a chapter
- */
 export const deletePage = mutation({
   args: { id: v.id("pages") },
   handler: async (ctx, args) => {
@@ -269,16 +285,13 @@ export const deletePage = mutation({
       throw new Error("Page not found");
     }
 
-    // Delete storage file
     if (page.storageId) {
       await ctx.storage.delete(page.storageId);
     }
 
-    // Delete the page
     await ctx.db.delete(args.id);
 
-    // Decrement the pages counter for analytics
-    await counter.dec(ctx, "pages");
+    await pagesAggregate.delete(ctx, page);
 
     return { success: true };
   },
@@ -305,26 +318,21 @@ export const deleteChapter = mutation({
         await ctx.storage.delete(page.storageId);
       }
       await ctx.db.delete(page._id);
-    }
-
-    // Decrement the pages counter for all deleted pages
-    if (pages.length > 0) {
-      await counter.subtract(ctx, "pages", pages.length);
+      // Clean up page aggregate
+      await pagesAggregate.delete(ctx, page);
     }
 
     // Delete the chapter
     await ctx.db.delete(args.id);
 
-    // Decrement the chapters counter
-    await counter.dec(ctx, "chapters");
+    // UPDATE AGGREGATES
+    await chaptersAggregate.delete(ctx, chapter);
+    await chaptersBySeries.delete(ctx, chapter);
 
     return { success: true };
   },
 });
 
-/**
- * Reorder pages in a chapter
- */
 export const reorderPages = mutation({
   args: {
     chapterId: v.id("chapters"),
@@ -344,16 +352,12 @@ export const reorderPages = mutation({
   },
 });
 
-/**
- * Get data for the reader page (pages with URLs)
- */
 export const getReaderData = query({
   args: {
     slug: v.string(),
     chapterNumber: v.number(),
   },
   handler: async (ctx, args) => {
-    // 1. Get series by slug
     const series = await ctx.db
       .query("series")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -361,7 +365,6 @@ export const getReaderData = query({
 
     if (!series) return null;
 
-    // 2. Get chapter by seriesId and chapterNumber
     const chapter = await ctx.db
       .query("chapters")
       .withIndex("by_series_id_and_number", (q) =>
@@ -371,7 +374,6 @@ export const getReaderData = query({
 
     if (!chapter) return null;
 
-    // 3. Get pages
     const pages = await ctx.db
       .query("pages")
       .withIndex("by_chapter_id", (q) => q.eq("chapterId", chapter._id))
@@ -380,7 +382,6 @@ export const getReaderData = query({
     // Sort pages
     pages.sort((a, b) => a.pageNumber - b.pageNumber);
 
-    // 4. Get URLs
     const pageUrls = await Promise.all(
       pages.map(async (page) => {
         if (!page.storageId) return null;
@@ -397,29 +398,25 @@ export const getReaderData = query({
   },
 });
 
-/**
- * Get all chapters across all series for admin management
- * Includes series information and page count
- * Uses server-side pagination for better performance
- */
 export const getAllChaptersAcrossSeries = query({
   args: {
-    paginationOpts: v.any(),
+    cursor: v.optional(v.string()),
+    limit: v.number(),
   },
   handler: async (ctx, args) => {
     await isAdmin(ctx);
 
+    const totalCount = await chaptersAggregate.count(ctx);
+
     const result = await ctx.db
       .query("chapters")
       .order("desc")
-      .paginate(args.paginationOpts);
+      .paginate({ cursor: args.cursor || null, numItems: args.limit });
 
     const chaptersWithDetails = await Promise.all(
       result.page.map(async (chapter) => {
-        // Get series info
         const series = await ctx.db.get(chapter.seriesId);
 
-        // Get page count
         const pages = await ctx.db
           .query("pages")
           .withIndex("by_chapter_id", (q) => q.eq("chapterId", chapter._id))
@@ -437,6 +434,24 @@ export const getAllChaptersAcrossSeries = query({
     return {
       ...result,
       page: chaptersWithDetails,
+      totalCount,
     };
+  },
+});
+
+export const getChapterViewCount = query({
+  args: { chapterId: v.id("chapters") },
+  handler: async (ctx, args) => {
+    return await counter.count(ctx, args.chapterId);
+  },
+});
+
+export const incrementChapterView = mutation({
+  args: { chapterId: v.id("chapters") },
+  handler: async (ctx, args) => {
+    await counter.inc(ctx, args.chapterId);
+    const viewCount = await counter.count(ctx, args.chapterId);
+    await ctx.db.patch(args.chapterId, { viewCount });
+    return { viewCount };
   },
 });

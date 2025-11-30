@@ -22,13 +22,22 @@ import {
 import { Textarea } from "../../ui/textarea";
 import { Button } from "../../ui/button";
 import { Separator } from "../../ui/separator";
-import { MultiSelect } from "../../ui/multi-select";
+import {
+  MultiSelect,
+  MultiSelectContent,
+  MultiSelectItem,
+  MultiSelectTrigger,
+  MultiSelectValue,
+} from "../../ui/multi-select";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { fileToBase64, uploadCover } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import * as React from "react";
+import { Loader2 } from "lucide-react"; // Import Loader2 for submission state
+import { CommandGroup } from "cmdk";
 
 const mangaSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title is too long"),
@@ -37,8 +46,8 @@ const mangaSchema = z.object({
   status: z
     .enum(["ongoing", "completed", "hiatus", "cancelled"])
     .default("ongoing"),
-  genres: z.array(z.string()).optional(),
-  coverImage: z.string().optional(), // base64
+  genres: z.array(z.string()).optional(), // Expects array of genre IDs (strings)
+  coverImage: z.string().optional(), // base64 representation of the new image
 });
 
 const statuses = [
@@ -55,7 +64,7 @@ type SeriesFormProps = {
     description?: string;
     author?: string;
     status?: "ongoing" | "completed" | "hiatus" | "cancelled";
-    genres?: string[];
+    genres?: string[]; // Array of genre IDs
     coverImageUrl?: string;
   };
   seriesId?: string;
@@ -71,14 +80,30 @@ export const SeriesForm = ({
   const updateManga = useMutation(api.series.updateSeries);
   const generateUploadUrl = useMutation(api.files.generateUploadUrls);
   const genres = useQuery(api.genres.getAllGenres) || [];
+
+  // State to hold the temporary local URL for preview
+  const [previewImageUrl, setPreviewImageUrl] = React.useState<string | null>(
+    initialValues?.coverImageUrl || null
+  );
+
+  // Transform genres data for MultiSelect component
+  const genreOptions = React.useMemo(
+    () =>
+      genres.map((genre) => ({
+        label: genre.name,
+        value: genre._id, // Use Convex ID as the value
+      })),
+    [genres]
+  );
+
   const form = useForm({
     defaultValues: {
       title: initialValues?.title || "",
       description: initialValues?.description || "",
       author: initialValues?.author || "",
       status: initialValues?.status || "ongoing",
-      genres: initialValues?.genres || [],
-      coverImage: "",
+      genres: initialValues?.genres || [], // Array of genre IDs
+      coverImage: "", // Holds Base64 or an empty string
     },
     validators: {
       // @ts-expect-error idc
@@ -90,7 +115,7 @@ export const SeriesForm = ({
       try {
         let storageId = null;
 
-        // Only upload if a new cover image is selected
+        // Only upload if a new cover image is selected (value.coverImage holds the Base64 string)
         if (value.coverImage) {
           const [uploadUrl] = await generateUploadUrl({ count: 1 });
           storageId = await uploadCover(value.coverImage, uploadUrl);
@@ -103,22 +128,25 @@ export const SeriesForm = ({
             description: value.description,
             author: value.author,
             status: value.status as z.infer<typeof mangaSchema>["status"],
-            genres: (value.genres || []) as Id<"genres">[],
-            coverImageStorageId: storageId || undefined,
+            genres: (value.genres || []) as Id<"genres">[], // genres array contains Id<"genres">
+            // Pass storageId only if a new file was uploaded, otherwise leave undefined to preserve current
+            coverImageStorageId: storageId !== null ? storageId : undefined,
           });
 
           toast.success("Series updated successfully!");
         } else {
-          await createManga({
+          const newSeriesId = await createManga({
             title: value.title,
             description: value.description,
             author: value.author,
             status: value.status as z.infer<typeof mangaSchema>["status"],
-            genres: (value.genres || []) as Id<"genres">[],
+            genres: (value.genres || []) as Id<"genres">[], // genres array contains Id<"genres">
             coverImageStorageId: storageId || undefined,
           });
 
           toast.success("Manga series created successfully!");
+          router.push(`/admin/series/edit/${newSeriesId}`); // Redirect to edit page
+          return;
         }
 
         router.push("/admin/series");
@@ -128,6 +156,22 @@ export const SeriesForm = ({
       }
     },
   });
+
+  // Function to handle file input change
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    handleChange: (value: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const base64 = await fileToBase64(file);
+      handleChange(base64); // Update form state with base64
+      setPreviewImageUrl(base64); // Update local state for preview
+    } else {
+      handleChange("");
+      setPreviewImageUrl(initialValues?.coverImageUrl || null);
+    }
+  };
 
   return (
     <Card className="max-w-4xl w-full">
@@ -152,39 +196,31 @@ export const SeriesForm = ({
                 {(field) => (
                   <Field>
                     <FieldLabel htmlFor={field.name}>Cover Image</FieldLabel>
-                    {mode === "edit" && initialValues?.coverImageUrl ? (
-                      <div className="mb-3">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Current cover:
-                        </p>
-                        <div className="relative w-full aspect-[2/3] max-w-[200px] mx-auto">
-                          <img
-                            src={initialValues.coverImageUrl}
-                            alt="Current cover"
-                            className="w-full h-full object-cover rounded-lg border-2 shadow-sm"
-                          />
+
+                    {/* Image Preview Area */}
+                    <div className="mb-3 w-full aspect-[2/3] max-w-[200px] mx-auto">
+                      {previewImageUrl ? (
+                        <img
+                          src={previewImageUrl}
+                          alt="Cover preview"
+                          className="w-full h-full object-cover rounded-lg border-2 shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted rounded-lg border-2 border-dashed flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">
+                            No cover
+                          </span>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="mb-3 w-full aspect-[2/3] max-w-[200px] mx-auto bg-muted rounded-lg border-2 border-dashed flex items-center justify-center">
-                        <span className="text-sm text-muted-foreground">
-                          No cover
-                        </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
+
                     <Input
                       type="file"
                       accept="image/*"
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
-                      onChange={async (e) =>
-                        field.handleChange(
-                          e.target.files && e.target.files[0]
-                            ? await fileToBase64(e.target.files[0])
-                            : ""
-                        )
-                      }
+                      onChange={(e) => handleFileChange(e, field.handleChange)}
                     />
                     {mode === "edit" && (
                       <p className="text-xs text-muted-foreground mt-2">
@@ -350,17 +386,30 @@ export const SeriesForm = ({
                     return (
                       <Field data-invalid={isInvalid} className="mt-4">
                         <FieldLabel htmlFor={field.name}>Genres</FieldLabel>
+
                         <MultiSelect
-                          options={genres.map((genre) => ({
-                            label: genre.name,
-                            value: genre._id,
-                          }))}
-                          onValueChange={(values) => field.handleChange(values)}
-                          defaultValue={field.state.value}
-                          placeholder="Select genres"
-                          maxCount={5}
-                          className="w-full"
-                        />
+                          values={field.state.value}
+                          onValuesChange={(values) =>
+                            field.handleChange(values as string[])
+                          }
+                        >
+                          <MultiSelectTrigger className="w-full">
+                            <MultiSelectValue placeholder="Select genres" />
+                          </MultiSelectTrigger>
+                          <MultiSelectContent>
+                            <CommandGroup>
+                              {genreOptions.map((option) => (
+                                <MultiSelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </MultiSelectItem>
+                              ))}
+                            </CommandGroup>
+                          </MultiSelectContent>
+                        </MultiSelect>
+
                         {isInvalid && (
                           <FieldError errors={field.state.meta.errors} />
                         )}
@@ -377,7 +426,14 @@ export const SeriesForm = ({
         <Button type="button" variant="outline" onClick={() => form.reset()}>
           Reset
         </Button>
-        <Button type="submit" form="manga-form">
+        <Button
+          type="submit"
+          form="manga-form"
+          disabled={form.state.isSubmitting}
+        >
+          {form.state.isSubmitting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : null}
           {mode === "edit" ? "Update Series" : "Create Series"}
         </Button>
       </CardFooter>
