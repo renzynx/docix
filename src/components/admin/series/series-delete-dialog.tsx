@@ -21,7 +21,7 @@ import { Trash2 } from "lucide-react";
 
 type SeriesDeleteDialogProps = {
   deletingId: Id<"series"> | null;
-  item: (typeof api.series.getAllSeries)["_returnType"][0];
+  item: (typeof api.series.getAllSeries)["_returnType"]["page"][0];
   handleDelete: (id: Id<"series">) => Promise<void>;
 };
 

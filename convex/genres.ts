@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { generateSlug, isAdmin } from "./helpers";
+import { counter } from "./counter";
 
 export const getAllGenres = query({
   handler: async (ctx) => {
@@ -55,6 +56,9 @@ export const createGenre = mutation({
       slug,
       description: args.description,
     });
+
+    // Increment genres counter
+    await counter.inc(ctx, "genres");
 
     return genreId;
   },
@@ -122,6 +126,9 @@ export const deleteGenre = mutation({
     }
 
     await ctx.db.delete(args.id);
+
+    // Decrement genres counter
+    await counter.dec(ctx, "genres");
 
     return args.id;
   },

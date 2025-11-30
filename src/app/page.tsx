@@ -6,7 +6,12 @@ import { fetchQuery } from "convex/nextjs";
 export default async function Home() {
   const [genres, series] = await Promise.all([
     fetchQuery(api.genres.getAllGenres),
-    fetchQuery(api.series.getAllSeries, {}),
+    fetchQuery(api.series.getAllSeries, {
+      paginationOpts: {
+        numItems: 20,
+        cursor: null,
+      },
+    }),
   ]);
 
   return (

@@ -23,6 +23,7 @@ export default defineSchema({
     coverImageStorageId: v.optional(v.id("_storage")),
     searchableText: v.string(),
     updatedAt: v.float64(),
+    viewCount: v.optional(v.float64()),
   })
     .index("by_slug", ["slug"])
     .searchIndex("search_series", {
@@ -58,7 +59,7 @@ export default defineSchema({
   readingHistory: defineTable({
     userId: v.id("users"),
     chapterId: v.id("chapters"),
-    seriesId: v.id("series"), // Denormalized for simpler "continue reading" queries
+    seriesId: v.id("series"),
     lastViewedPage: v.number(),
   })
     .index("by_user_and_chapter", ["userId", "chapterId"])

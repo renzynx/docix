@@ -24,7 +24,7 @@ export const isAuth = async (ctx: QueryCtx | MutationCtx) => {
 export const isAdmin = async (ctx: QueryCtx | MutationCtx) => {
   const identity = await ctx.auth.getUserIdentity();
 
-  console.log("User identity:", identity);
+  console.log("identity", identity);
 
   if (!identity || identity?.role !== "admin") {
     throw new Error("Unauthorized: Admins only");

@@ -3,7 +3,7 @@
 import { UserButton, useUser } from "@clerk/nextjs";
 import { api } from "@convex/_generated/api";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import { Search, ShieldHalf } from "lucide-react";
+import { Search, ShieldUser } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ModeToggle } from "./mode-toggle";
@@ -124,8 +124,8 @@ export const Navbar = ({ genres }: NavbarProps) => {
             {user?.publicMetadata.role === "admin" && (
               <UserButton.MenuItems>
                 <UserButton.Link
-                  label="Management Dashboard"
-                  labelIcon={<ShieldHalf size={16} />}
+                  label="Management"
+                  labelIcon={<ShieldUser size={16} />}
                   href="/admin"
                 />
               </UserButton.MenuItems>

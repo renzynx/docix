@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { isAuth, isAdmin } from "./helpers";
+import { counter } from "./counter";
 
 export const getAllChapters = query({
   args: {
@@ -48,17 +49,13 @@ export const getChapterById = query({
       .collect();
 
     // Sort pages by pageNumber
-    const sortedPages = pages.sort((a, b) => a.pageNumber - b.pageNumber);
+    pages.sort((a, b) => a.pageNumber - b.pageNumber);
 
-    // Get URLs for each page
     const pagesWithUrls = await Promise.all(
-      sortedPages.map(async (page) => {
-        const url = await ctx.storage.getUrl(page.storageId);
-        return {
-          ...page,
-          url,
-        };
-      })
+      pages.map(async (page) => ({
+        ...page,
+        url: page.storageId ? await ctx.storage.getUrl(page.storageId) : null,
+      }))
     );
 
     return {
@@ -68,54 +65,60 @@ export const getChapterById = query({
   },
 });
 
-export const getReaderData = query({
+export const getNextChapter = query({
   args: {
-    slug: v.string(),
-    chapterNumber: v.number(),
+    seriesId: v.id("series"),
+    currentChapterNumber: v.number(),
   },
   handler: async (ctx, args) => {
-    // 1. Find the series by slug
-    const series = await ctx.db
-      .query("series")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .unique();
-
-    if (!series) {
-      return null;
-    }
-
-    const chapter = await ctx.db
+    // Find the chapter with the next highest number
+    const nextChapter = await ctx.db
       .query("chapters")
       .withIndex("by_series_id_and_number", (q) =>
-        q.eq("seriesId", series._id).eq("chapterNumber", args.chapterNumber)
+        q.eq("seriesId", args.seriesId)
       )
-      .unique();
+      .filter((q) => q.gt(q.field("chapterNumber"), args.currentChapterNumber))
+      .first();
 
-    if (!chapter) {
-      return null;
-    }
-
-    const pages = await ctx.db
-      .query("pages")
-      .withIndex("by_chapter_id", (q) => q.eq("chapterId", chapter._id))
-      .collect();
-
-    // Sort pages by pageNumber
-    const sortedPages = pages.sort((a, b) => a.pageNumber - b.pageNumber);
-
-    const pageUrls = await Promise.all(
-      sortedPages.map((page) => ctx.storage.getUrl(page.storageId))
-    );
-
-    return {
-      seriesId: series._id,
-      chapterId: chapter._id,
-      pageUrls: pageUrls.filter((url) => url !== null) as string[],
-    };
+    return nextChapter;
   },
 });
 
-export const updateProgress = mutation({
+export const getPreviousChapter = query({
+  args: {
+    seriesId: v.id("series"),
+    currentChapterNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Find the chapter with the next lowest number
+    // Since we can't easily sort in reverse with filter, we'll fetch all chapters
+    // and find the one immediately preceding
+    const chapters = await ctx.db
+      .query("chapters")
+      .withIndex("by_series_id_and_number", (q) =>
+        q.eq("seriesId", args.seriesId)
+      )
+      .collect();
+
+    // Sort by chapter number ascending
+    chapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+
+    // Find the index of current chapter (or where it would be)
+    // We want the chapter with largest number that is still less than current
+    let prevChapter = null;
+    for (const chapter of chapters) {
+      if (chapter.chapterNumber < args.currentChapterNumber) {
+        prevChapter = chapter;
+      } else {
+        break;
+      }
+    }
+
+    return prevChapter;
+  },
+});
+
+export const markChapterRead = mutation({
   args: {
     chapterId: v.id("chapters"),
     seriesId: v.id("series"),
@@ -123,6 +126,7 @@ export const updateProgress = mutation({
   },
   handler: async (ctx, args) => {
     const user = await isAuth(ctx);
+    if (!user) return; // Silent fail for non-logged in users
 
     const existingHistory = await ctx.db
       .query("readingHistory")
@@ -177,6 +181,9 @@ export const createChapter = mutation({
       title: args.title,
     });
 
+    // Increment the chapters counter for analytics
+    await counter.inc(ctx, "chapters");
+
     await ctx.db.patch(args.seriesId, { updatedAt: Date.now() });
 
     return chapterId;
@@ -197,6 +204,9 @@ export const addPage = mutation({
       pageNumber: args.pageNumber,
       storageId: args.storageId,
     });
+
+    // Increment the pages counter for analytics
+    await counter.inc(ctx, "pages");
 
     return pageId;
   },
@@ -267,6 +277,9 @@ export const deletePage = mutation({
     // Delete the page
     await ctx.db.delete(args.id);
 
+    // Decrement the pages counter for analytics
+    await counter.dec(ctx, "pages");
+
     return { success: true };
   },
 });
@@ -294,8 +307,16 @@ export const deleteChapter = mutation({
       await ctx.db.delete(page._id);
     }
 
+    // Decrement the pages counter for all deleted pages
+    if (pages.length > 0) {
+      await counter.subtract(ctx, "pages", pages.length);
+    }
+
     // Delete the chapter
     await ctx.db.delete(args.id);
+
+    // Decrement the chapters counter
+    await counter.dec(ctx, "chapters");
 
     return { success: true };
   },
@@ -320,5 +341,102 @@ export const reorderPages = mutation({
     }
 
     return { success: true };
+  },
+});
+
+/**
+ * Get data for the reader page (pages with URLs)
+ */
+export const getReaderData = query({
+  args: {
+    slug: v.string(),
+    chapterNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // 1. Get series by slug
+    const series = await ctx.db
+      .query("series")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+
+    if (!series) return null;
+
+    // 2. Get chapter by seriesId and chapterNumber
+    const chapter = await ctx.db
+      .query("chapters")
+      .withIndex("by_series_id_and_number", (q) =>
+        q.eq("seriesId", series._id).eq("chapterNumber", args.chapterNumber)
+      )
+      .unique();
+
+    if (!chapter) return null;
+
+    // 3. Get pages
+    const pages = await ctx.db
+      .query("pages")
+      .withIndex("by_chapter_id", (q) => q.eq("chapterId", chapter._id))
+      .collect();
+
+    // Sort pages
+    pages.sort((a, b) => a.pageNumber - b.pageNumber);
+
+    // 4. Get URLs
+    const pageUrls = await Promise.all(
+      pages.map(async (page) => {
+        if (!page.storageId) return null;
+        return await ctx.storage.getUrl(page.storageId);
+      })
+    );
+
+    return {
+      pageUrls: pageUrls.filter(Boolean) as string[],
+      chapterId: chapter._id,
+      seriesId: series._id,
+      title: chapter.title,
+    };
+  },
+});
+
+/**
+ * Get all chapters across all series for admin management
+ * Includes series information and page count
+ * Uses server-side pagination for better performance
+ */
+export const getAllChaptersAcrossSeries = query({
+  args: {
+    paginationOpts: v.any(),
+  },
+  handler: async (ctx, args) => {
+    await isAdmin(ctx);
+
+    const result = await ctx.db
+      .query("chapters")
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    const chaptersWithDetails = await Promise.all(
+      result.page.map(async (chapter) => {
+        // Get series info
+        const series = await ctx.db.get(chapter.seriesId);
+
+        // Get page count
+        const pages = await ctx.db
+          .query("pages")
+          .withIndex("by_chapter_id", (q) => q.eq("chapterId", chapter._id))
+          .collect();
+
+        return {
+          ...chapter,
+          seriesTitle: series?.title || "Unknown Series",
+          seriesSlug: series?.slug || "",
+          pageCount: pages.length,
+        };
+      })
+    );
+
+    return {
+      ...result,
+      page: chaptersWithDetails,
+    };
   },
 });

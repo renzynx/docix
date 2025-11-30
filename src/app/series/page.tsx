@@ -1,13 +1,10 @@
 import { Navbar } from "@/components/navbar";
-import { SeriesGrid } from "@/components/series/series-grid";
+import { SeriesBrowser } from "@/components/series/series-browser";
 import { api } from "@convex/_generated/api";
 import { fetchQuery } from "convex/nextjs";
 
 export default async function BrowsePage() {
-  const [genres, series] = await Promise.all([
-    fetchQuery(api.genres.getAllGenres),
-    fetchQuery(api.series.getAllSeries, {}),
-  ]);
+  const genres = await fetchQuery(api.genres.getAllGenres);
 
   return (
     <>
@@ -19,7 +16,7 @@ export default async function BrowsePage() {
             Explore our complete collection of manga and comics
           </p>
         </div>
-        <SeriesGrid series={series} />
+        <SeriesBrowser />
       </main>
     </>
   );

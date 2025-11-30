@@ -4,7 +4,7 @@ import { api } from "@convex/_generated/api";
 import { DataModel, Id } from "@convex/_generated/dataModel";
 import { Edit, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "../../ui/button";
 import {
   Card,
@@ -38,6 +38,7 @@ import {
 } from "@dnd-kit/sortable";
 import { SortablePageItem } from "./sortable-page-item";
 import { useMutation } from "convex/react";
+import { TablePagination } from "../table-pagination";
 
 type PageListProps = {
   chapter: NonNullable<(typeof api.chapters.getChapterById)["_returnType"]>;
@@ -54,7 +55,18 @@ export const PageList = ({ chapter, seriesId, chapterId }: PageListProps) => {
     DataModel["pages"]["document"] | null
   >(null);
   const [pages, setPages] = useState(chapter.pages);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(24); // Good number for grid layout
   const reorderPages = useMutation(api.chapters.reorderPages);
+
+  // Paginate pages
+  const paginatedPages = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return pages.slice(startIndex, endIndex);
+  }, [pages, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(pages.length / itemsPerPage);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -85,6 +97,16 @@ export const PageList = ({ chapter, seriesId, chapterId }: PageListProps) => {
         setPages(pages);
       }
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleItemsPerPageChange = (items: number) => {
+    setItemsPerPage(items);
+    setCurrentPage(1);
   };
 
   return (
@@ -138,28 +160,41 @@ export const PageList = ({ chapter, seriesId, chapterId }: PageListProps) => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           {pages.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={pages.map((p) => p._id)}
-                strategy={rectSortingStrategy}
+            <>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {pages.map((page) => (
-                    <SortablePageItem
-                      key={page._id}
-                      page={page}
-                      onDelete={() => setPageDelete(page)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+                <SortableContext
+                  items={paginatedPages.map((p) => p._id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {paginatedPages.map((page) => (
+                      <SortablePageItem
+                        key={page._id}
+                        page={page}
+                        onDelete={() => setPageDelete(page)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={pages.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                itemsPerPageOptions={[12, 24, 48, 96]}
+                itemLabel="pages"
+              />
+            </>
           ) : (
             <p className="text-muted-foreground text-center py-8">
               No pages in this chapter yet.

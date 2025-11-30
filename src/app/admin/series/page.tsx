@@ -13,7 +13,15 @@ import { fetchQuery } from "convex/nextjs";
 import { SeriesList } from "@/components/admin/series/series-list";
 
 export default async function SeriesPage() {
-  const series = await fetchQuery(api.series.getAllSeries, {});
+  const paginatedResult = await fetchQuery(api.series.getAllSeries, {
+    paginationOpts: {
+      numItems: 50,
+      cursor: null,
+    },
+  });
+
+  // Extract the array of series from the paginated result
+  const series = paginatedResult.page;
 
   return (
     <div className="space-y-4">

@@ -1,10 +1,13 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { generateSlug, isAuth, isAdmin } from "./helpers";
+import { counter } from "./counter";
 
 export const getAllSeries = query({
   args: {
     statusFilter: v.optional(v.string()),
+    paginationOpts: v.any(),
   },
   handler: async (ctx, args) => {
     let seriesQuery = ctx.db.query("series").order("desc");
@@ -15,10 +18,11 @@ export const getAllSeries = query({
       );
     }
 
-    const results = await seriesQuery.collect();
+    const results = await seriesQuery.paginate(args.paginationOpts);
 
-    const patchedResults = await Promise.all(
-      results.map(async (series) => {
+    const patchedPage = await Promise.all(
+      results.page.map(async (series) => {
+        // 1. Get Genre Names
         const genreNames = series.genres
           ? await Promise.all(
               series.genres.map(async (genreId) => {
@@ -28,17 +32,28 @@ export const getAllSeries = query({
             )
           : [];
 
+        // 2. Get Latest Chapter
+        const latestChapter = await ctx.db
+          .query("chapters")
+          .withIndex("by_series_id", (q) => q.eq("seriesId", series._id))
+          .order("desc")
+          .first();
+
         return {
           ...series,
           coverImageUrl: series.coverImageStorageId
             ? await ctx.storage.getUrl(series.coverImageStorageId)
             : null,
           genreNames: genreNames.filter(Boolean) as string[],
+          latestChapter,
         };
       })
     );
 
-    return patchedResults;
+    return {
+      ...results,
+      page: patchedPage,
+    };
   },
 });
 
@@ -113,7 +128,11 @@ export const createSeries = mutation({
       coverImageStorageId: args.coverImageStorageId,
       searchableText: `${args.title} ${args.description} ${args.author}`,
       updatedAt: Date.now(),
+      viewCount: 0,
     });
+
+    // Increment the series counter for pagination
+    await counter.inc(ctx, "series");
 
     return newSeriesId;
   },
@@ -221,6 +240,12 @@ export const deleteSeries = mutation({
 
     // Delete the series
     await ctx.db.delete(args.id);
+
+    // Decrement the series counter for pagination
+    await counter.dec(ctx, "series");
+
+    // Reset the view counter for this series
+    await counter.reset(ctx, args.id);
 
     return { success: true };
   },
@@ -411,7 +436,6 @@ export const getIsFavorited = query({
 
       return existingFavorite !== null;
     } catch {
-      // User is not logged in, so they can't have a favorite
       return false;
     }
   },
@@ -435,12 +459,16 @@ export const toggleFavorite = mutation({
 
     if (existingFavorite) {
       await ctx.db.delete(existingFavorite._id);
+      // Decrement favorites counter
+      await counter.dec(ctx, "favorites");
       return { favorited: false };
     } else {
       await ctx.db.insert("favorites", {
         userId: user._id,
         seriesId: args.seriesId,
       });
+      // Increment favorites counter
+      await counter.inc(ctx, "favorites");
       return { favorited: true };
     }
   },
@@ -469,9 +497,10 @@ export const getSeriesByGenre = query({
       (series) => series.genres && series.genres.includes(genre._id)
     );
 
-    // Patch with cover images and genre names
+    // Patch with cover images, genre names, and latest chapter
     const patchedResults = await Promise.all(
       seriesWithGenre.map(async (series) => {
+        // 1. Get Genre Names
         const genreNames = series.genres
           ? await Promise.all(
               series.genres.map(async (genreId) => {
@@ -481,16 +510,80 @@ export const getSeriesByGenre = query({
             )
           : [];
 
+        // 2. Get Latest Chapter
+        const latestChapter = await ctx.db
+          .query("chapters")
+          .withIndex("by_series_id", (q) => q.eq("seriesId", series._id))
+          .order("desc")
+          .first();
+
         return {
           ...series,
           coverImageUrl: series.coverImageStorageId
             ? await ctx.storage.getUrl(series.coverImageStorageId)
             : null,
           genreNames: genreNames.filter(Boolean) as string[],
+          latestChapter,
         };
       })
     );
 
     return patchedResults;
+  },
+});
+
+/**
+ * Get total series count for pagination
+ * This uses the sharded counter for efficient counting without scanning all documents
+ */
+export const getTotalSeriesCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const count = await counter.count(ctx, "series");
+    return count;
+  },
+});
+
+/**
+ * Increment view count for a series
+ * This updates both the sharded counter and caches the value in the series document
+ */
+export const incrementSeriesView = mutation({
+  args: { seriesId: v.id("series") },
+  handler: async (ctx, args) => {
+    // Increment the sharded counter for this series
+    await counter.inc(ctx, args.seriesId);
+
+    // Get the updated count and cache it in the series document for faster reads
+    const viewCount = await counter.count(ctx, args.seriesId);
+
+    await ctx.db.patch(args.seriesId, {
+      viewCount,
+    });
+
+    return { viewCount };
+  },
+});
+
+/**
+ * Get view count for a series
+ * Returns the cached value from the document for fast reads
+ */
+export const getSeriesViewCount = query({
+  args: { seriesId: v.id("series") },
+  handler: async (ctx, args) => {
+    const series = await ctx.db.get(args.seriesId);
+
+    if (!series) {
+      return 0;
+    }
+
+    // Return cached value or fetch from counter if not cached
+    if (series.viewCount !== undefined) {
+      return series.viewCount;
+    }
+
+    const viewCount = await counter.count(ctx, args.seriesId);
+    return viewCount;
   },
 });

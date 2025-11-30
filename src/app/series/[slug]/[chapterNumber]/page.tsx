@@ -9,7 +9,7 @@ type ReaderPageProps = {
 
 export default async function ReaderPage({ params }: ReaderPageProps) {
   const { slug, chapterNumber } = await params;
-  const chapterNum = parseInt(chapterNumber);
+  const chapterNum = parseInt(chapterNumber.split("-")[1], 10);
 
   // Get series and chapter data
   const series = await fetchQuery(api.series.getBySlug, { slug });
@@ -52,6 +52,15 @@ export default async function ReaderPage({ params }: ReaderPageProps) {
     imageUrl: url,
   }));
 
+  // Prepare chapter list for selector
+  const chapterList = allChapters
+    .map((ch) => ({
+      number: ch.chapterNumber,
+      title: ch.title,
+      _id: ch._id,
+    }))
+    .sort((a, b) => b.number - a.number);
+
   return (
     <Reader
       seriesSlug={slug}
@@ -61,6 +70,7 @@ export default async function ReaderPage({ params }: ReaderPageProps) {
       pages={pages}
       hasNextChapter={hasNextChapter}
       hasPrevChapter={hasPrevChapter}
+      chapters={chapterList}
     />
   );
 }

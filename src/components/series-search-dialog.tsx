@@ -10,6 +10,7 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type SeriesSearchDialogProps = {
@@ -22,6 +23,7 @@ export const SeriesSearchDialog = ({
   setOpen,
 }: SeriesSearchDialogProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const data = useQuery(
     api.series.searchSeries,
@@ -54,7 +56,7 @@ export const SeriesSearchDialog = ({
                 key={series._id}
                 value={series.title}
                 onSelect={() => {
-                  // Handle series selection
+                  router.push(`/series/${series.slug}`);
                   setOpen(false);
                 }}
               >
