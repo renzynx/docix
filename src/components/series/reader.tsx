@@ -239,14 +239,6 @@ export const Reader = ({
               <span className="sr-only">Next</span>
             </Link>
           </Button>
-
-          {/* Follow Button */}
-          <div className="hidden sm:block border-l border-border pl-2 ml-1">
-            <Button className="h-9 border-0 gap-2 px-3">
-              <Heart className="h-4 w-4" />
-              <span>Follow</span>
-            </Button>
-          </div>
         </div>
       </footer>
     </div>
