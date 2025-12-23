@@ -3,8 +3,8 @@ package server
 import (
 	"time"
 
-	"github.com/go-chi/chi"
-	chimiddleware "github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/renzynx/docix/packages/go/signing"
 	"github.com/renzynx/docix/server/internal/config"
 	"github.com/renzynx/docix/server/internal/constants"

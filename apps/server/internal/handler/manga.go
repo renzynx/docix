@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/renzynx/docix/server/internal/auth"
 	"github.com/renzynx/docix/server/internal/database"
 	"github.com/renzynx/docix/server/internal/response"

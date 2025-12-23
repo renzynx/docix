@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/renzynx/docix/packages/go/signing"
 	"github.com/renzynx/docix/server/internal/database"
 	"github.com/renzynx/docix/server/internal/models"

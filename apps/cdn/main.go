@@ -9,8 +9,8 @@ import (
 
 	"github.com/docix/cdn/internal/config"
 	"github.com/docix/cdn/internal/handler"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {

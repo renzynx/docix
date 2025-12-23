@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/renzynx/docix/server/internal/models"
 	"github.com/renzynx/docix/server/internal/response"
 	"github.com/renzynx/docix/server/internal/validator"
