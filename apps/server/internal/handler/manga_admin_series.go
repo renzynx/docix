@@ -33,7 +33,16 @@ func (h *MangaAdminHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{}
 	if status != "" {
-		filter["status"] = status
+		// Valid status values
+		validStatuses := map[string]bool{
+			"ongoing":   true,
+			"completed": true,
+			"hiatus":    true,
+			"cancelled": true,
+		}
+		if validStatuses[status] {
+			filter["status"] = status
+		}
 	}
 	if search != "" {
 		filter["$text"] = bson.M{"$search": search}
@@ -42,6 +51,7 @@ func (h *MangaAdminHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	sortField := "created_at"
 	sortOrder := -1
 	if sortBy != "" {
+		// Valid sort fields
 		switch sortBy {
 		case "title", "created_at", "updated_at", "view_count", "chapter_count":
 			sortField = sortBy

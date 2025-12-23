@@ -34,8 +34,8 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ServeImage(w http.ResponseWriter, r *http.Request) {
-	// Extract filename from path (remove leading slash)
-	filename := strings.TrimPrefix(r.URL.Path, "/")
+	// Extract filename from path
+	filename := filepath.Base(r.URL.Path)
 
 	// Skip health endpoint
 	if filename == "health" {
