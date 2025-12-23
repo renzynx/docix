@@ -1,0 +1,11 @@
+{
+	"name": "cdn",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "air",
+		"build": "go build -o bin/cdn .",
+		"start": "./bin/cdn",
+		"clean": "rm -rf bin tmp"
+	}
+}

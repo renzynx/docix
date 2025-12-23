@@ -1,0 +1,7 @@
+packages:
+  - path: "github.com/renzynx/docix/server/internal/models"
+    output_path: "../../packages/types/src/models.ts"
+    type_mappings:
+      "bson.ObjectID": "string"
+      "time.Time": "string"
+    fallback_type: "any"

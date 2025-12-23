@@ -1,0 +1,69 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": ["**"]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"css": {
+		"parser": {
+			"cssModules": true,
+			"tailwindDirectives": true
+		},
+		"linter": {
+			"enabled": false
+		}
+	},
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"performance": {
+				"noImgElement": "off"
+			},
+			"style": {
+				"noUselessElse": "off",
+				"useSelfClosingElements": "off",
+				"noNonNullAssertion": "off"
+			},
+			"complexity": {
+				"useArrowFunction": "off"
+			},
+			"correctness": {
+				"noUnusedImports": "warn"
+			},
+			"suspicious": {
+				"noArrayIndexKey": "off",
+				"noExplicitAny": "off"
+			},
+			"a11y": {
+				"useButtonType": "off",
+				"useAltText": "warn",
+				"useValidAriaProps": "warn",
+				"useValidAriaValues": "warn",
+				"useAriaPropsForRole": "warn",
+				"noAriaUnsupportedElements": "warn",
+				"useAriaPropsSupportedByRole": "warn",
+				"noRedundantAlt": "off",
+				"noRedundantRoles": "off",
+				"useSemanticElements": "off",
+				"useKeyWithClickEvents": "off",
+				"noLabelWithoutControl": "off"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double"
+		}
+	}
+}

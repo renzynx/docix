@@ -1,0 +1,46 @@
+{
+	"name": "@docix/ui",
+	"version": "0.0.0",
+	"private": true,
+	"sideEffects": false,
+	"exports": {
+		"./globals.css": "./src/styles/globals.css",
+		"./postcss.config": "./postcss.config.mjs",
+		"./lib/*": "./src/lib/*.ts",
+		"./components/*": "./src/components/*.tsx",
+		"./hooks/*": "./src/hooks/*.ts"
+	},
+	"scripts": {
+		"lint": "biome lint .",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@base-ui/react": "catalog:",
+		"@hugeicons/core-free-icons": "catalog:",
+		"@hugeicons/react": "catalog:",
+		"class-variance-authority": "catalog:",
+		"clsx": "catalog:",
+		"embla-carousel-autoplay": "catalog:",
+		"embla-carousel-react": "catalog:",
+		"shadcn": "^3.6.2",
+		"sonner": "catalog:",
+		"tailwind-merge": "catalog:",
+		"tailwindcss": "catalog:",
+		"tw-animate-css": "catalog:"
+	},
+	"peerDependencies": {
+		"next": ">=16.0.0",
+		"next-themes": ">=0.3.0",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@docix/typescript-config": "workspace:*",
+		"@tailwindcss/postcss": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"next": "catalog:",
+		"next-themes": "catalog:",
+		"typescript": "catalog:"
+	}
+}

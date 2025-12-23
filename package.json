@@ -1,0 +1,32 @@
+{
+	"name": "docix",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "turbo dev",
+		"dev:web": "turbo dev --filter=web",
+		"dev:admin": "turbo dev --filter=admin",
+		"dev:server": "turbo dev --filter=server",
+		"dev:cdn": "turbo dev --filter=cdn",
+		"build": "turbo build",
+		"build:web": "turbo build --filter=web",
+		"build:admin": "turbo build --filter=admin",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write .",
+		"type-check": "turbo type-check",
+		"generate:types": "pnpm --filter server generate:types",
+		"generate:api": "go run ./packages/go/codegen/",
+		"generate": "pnpm generate:types && pnpm generate:api",
+		"clean": "turbo clean"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.10",
+		"turbo": "^2.7.1"
+	},
+	"engines": {
+		"node": ">=24",
+		"pnpm": ">=10"
+	},
+	"packageManager": "pnpm@10.26.0"
+}

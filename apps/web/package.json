@@ -1,0 +1,39 @@
+{
+	"name": "web",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"lint": "biome lint .",
+		"type-check": "tsc --noEmit",
+		"clean": "rm -rf .next"
+	},
+	"dependencies": {
+		"@docix/types": "workspace:*",
+		"@docix/ui": "workspace:*",
+		"@hugeicons/core-free-icons": "catalog:",
+		"@hugeicons/react": "catalog:",
+		"@tanstack/react-form": "catalog:",
+		"@tanstack/react-query": "catalog:",
+		"axios": "catalog:",
+		"date-fns": "catalog:",
+		"embla-carousel-autoplay": "catalog:",
+		"embla-carousel-react": "catalog:",
+		"next": "catalog:",
+		"next-themes": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"sonner": "catalog:",
+		"superjson": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@docix/typescript-config": "workspace:*",
+		"@types/node": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"typescript": "catalog:"
+	}
+}
