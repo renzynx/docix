@@ -78,7 +78,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # CDN / Image Server
   cdn:
     build:
       context: .
@@ -96,7 +95,6 @@ services:
       - CDN_BASE_URL=http://localhost:8081
     restart: unless-stopped
 
-  # Web Frontend (Next.js)
   web:
     build:
       context: .
@@ -112,7 +110,6 @@ services:
     profiles:
       - frontend
 
-  # Admin Frontend (Next.js)
   admin:
     build:
       context: .

@@ -1,17 +1,17 @@
-# Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:alpine AS builder
 
 RUN apk add --no-cache git
 
 WORKDIR /app
 
 # Copy go.work and all module files first for better caching
-COPY go.work go.work.sum ./
-COPY apps/server/go.mod apps/server/go.sum ./apps/server/
-COPY apps/worker/go.mod apps/worker/go.sum ./apps/worker/
-COPY apps/cdn/go.mod apps/cdn/go.sum ./apps/cdn/
-COPY packages/go/go.mod packages/go/go.sum ./packages/go/
-COPY packages/go/redis/go.mod packages/go/redis/go.sum ./packages/go/redis/
+COPY go.work ./
+COPY go.work.sum* ./
+COPY apps/server/go.* ./apps/server/
+COPY apps/worker/go.* ./apps/worker/
+COPY apps/cdn/go.* ./apps/cdn/
+COPY packages/go/go.* ./packages/go/
+COPY packages/go/redis/go.* ./packages/go/redis/
 
 # Download dependencies
 RUN cd apps/server && go mod download

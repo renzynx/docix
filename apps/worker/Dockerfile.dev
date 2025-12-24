@@ -1,5 +1,5 @@
 # Development Dockerfile with hot-reload
-FROM golang:1.24-alpine
+FROM golang:alpine
 
 # Install build dependencies for bimg/libvips
 RUN apk add --no-cache git vips-dev gcc musl-dev
@@ -9,13 +9,16 @@ RUN go install github.com/air-verse/air@latest
 
 WORKDIR /app
 
-# Copy go.work and module files
-COPY go.work go.work.sum ./
-COPY apps/server/go.mod apps/server/go.sum ./apps/server/
-COPY apps/worker/go.mod apps/worker/go.sum ./apps/worker/
-COPY apps/cdn/go.mod apps/cdn/go.sum ./apps/cdn/
-COPY packages/go/go.mod packages/go/go.sum ./packages/go/
-COPY packages/go/redis/go.mod packages/go/redis/go.sum ./packages/go/redis/
+# Copy go workspace files
+COPY go.work ./
+COPY go.work.sum* ./
+
+# Copy all go.mod and go.sum files (preserving directory structure)
+COPY apps/server/go.* ./apps/server/
+COPY apps/worker/go.* ./apps/worker/
+COPY apps/cdn/go.* ./apps/cdn/
+COPY packages/go/go.* ./packages/go/
+COPY packages/go/redis/go.* ./packages/go/redis/
 
 # Download dependencies
 RUN cd apps/worker && go mod download

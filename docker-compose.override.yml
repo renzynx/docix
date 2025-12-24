@@ -3,7 +3,6 @@
 # It adds hot-reload support by mounting source code and using air
 
 services:
-  # API Server with hot-reload
   server:
     build:
       context: .
@@ -15,7 +14,6 @@ services:
       - go_mod_cache:/go/pkg/mod
     command: ["air", "-c", ".air.toml"]
 
-  # Worker with hot-reload
   worker:
     build:
       context: .
@@ -27,7 +25,6 @@ services:
       - go_mod_cache:/go/pkg/mod
     command: ["air", "-c", ".air.toml"]
 
-  # CDN with hot-reload
   cdn:
     build:
       context: .
@@ -39,9 +36,8 @@ services:
       - go_mod_cache:/go/pkg/mod
     command: ["air", "-c", ".air.toml"]
 
-  # Web Frontend with hot-reload
   web:
-    image: node:20-alpine
+    image: node:lts-alpine
     container_name: docix-web
     working_dir: /app
     ports:
@@ -56,9 +52,8 @@ services:
     profiles:
       - frontend
 
-  # Admin Frontend with hot-reload
   admin:
-    image: node:20-alpine
+    image: node:lts-alpine
     container_name: docix-admin
     working_dir: /app
     ports:
