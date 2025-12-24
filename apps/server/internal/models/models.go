@@ -66,12 +66,12 @@ type ErrorResponse struct {
 }
 
 type SessionListItem struct {
-	ID        bson.ObjectID `json:"id"`
-	IPAddress string        `json:"ip_address"`
-	UserAgent string        `json:"user_agent"`
-	ExpiresAt time.Time     `json:"expires_at"`
-	CreatedAt time.Time     `json:"created_at"`
-	IsCurrent bool          `json:"is_current"`
+	ID        string    `json:"id"`
+	IPAddress string    `json:"ip_address"`
+	UserAgent string    `json:"user_agent"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+	IsCurrent bool      `json:"is_current"`
 }
 
 type RevokeSessionRequest struct {

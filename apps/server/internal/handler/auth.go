@@ -12,6 +12,7 @@ import (
 	"github.com/renzynx/docix/server/internal/models"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/response"
+	"github.com/renzynx/docix/server/internal/session"
 	"github.com/renzynx/docix/server/internal/validator"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -20,12 +21,17 @@ import (
 )
 
 type AuthHandler struct {
-	DB   *database.Database
-	RBAC *rbac.Service
+	DB           *database.Database
+	RBAC         *rbac.Service
+	SessionStore session.Store
 }
 
-func NewAuthHandler(db *database.Database, rbacService *rbac.Service) *AuthHandler {
-	return &AuthHandler{DB: db, RBAC: rbacService}
+func NewAuthHandler(db *database.Database, rbacService *rbac.Service, sessionStore session.Store) *AuthHandler {
+	return &AuthHandler{
+		DB:           db,
+		RBAC:         rbacService,
+		SessionStore: sessionStore,
+	}
 }
 
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -93,14 +99,14 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, jwtToken, err := h.createSession(r, user.ID)
+	sess, jwtToken, err := h.createSession(r, user.ID.Hex())
 	if err != nil {
 		log.Error("Failed to create session: ", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to create session")
 		return
 	}
 
-	auth.SetSessionCookie(w, jwtToken, session.ExpiresAt)
+	auth.SetSessionCookie(w, jwtToken, sess.ExpiresAt)
 
 	response.JSON(w, http.StatusOK, models.AuthResponse{
 		Message: "Signed in successfully",
@@ -121,14 +127,7 @@ func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID, err := bson.ObjectIDFromHex(claims.SessionID)
-	if err != nil {
-		auth.ClearSessionCookie(w)
-		response.Error(w, http.StatusBadRequest, "Invalid session token")
-		return
-	}
-
-	_, err = h.DB.Sessions.DeleteOne(r.Context(), bson.M{"_id": sessionID})
+	err = h.SessionStore.Delete(r.Context(), claims.SessionID)
 	if err != nil {
 		log.Error("Failed to delete session: ", err)
 	}
@@ -141,60 +140,46 @@ func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
-	session := middleware.GetSessionFromContext(r.Context())
+	sess := middleware.GetSessionFromContext(r.Context())
 
-	cursor, err := h.DB.Sessions.Find(r.Context(), bson.M{"user_id": session.UserID})
+	sessions, err := h.SessionStore.ListByUserID(r.Context(), sess.UserID)
 	if err != nil {
 		log.Error("Failed to find sessions: ", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to list sessions")
 		return
 	}
-	defer cursor.Close(r.Context())
 
-	var sessions []models.SessionListItem
-	for cursor.Next(r.Context()) {
-		var s models.Session
-		if err := cursor.Decode(&s); err != nil {
-			continue
-		}
-		sessions = append(sessions, models.SessionListItem{
+	var items []models.SessionListItem
+	for _, s := range sessions {
+		items = append(items, models.SessionListItem{
 			ID:        s.ID,
 			IPAddress: s.IPAddress,
 			UserAgent: s.UserAgent,
 			ExpiresAt: s.ExpiresAt,
 			CreatedAt: s.CreatedAt,
-			IsCurrent: s.ID == session.ID,
+			IsCurrent: s.ID == sess.ID,
 		})
 	}
 
-	response.JSON(w, http.StatusOK, sessions)
+	response.JSON(w, http.StatusOK, items)
 }
 
 func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
-	session := middleware.GetSessionFromContext(r.Context())
+	sess := middleware.GetSessionFromContext(r.Context())
 
 	req, ok := validator.HandleRequest[models.RevokeSessionRequest](w, r)
 	if !ok {
 		return
 	}
 
-	sessionID, err := bson.ObjectIDFromHex(req.SessionID)
-	if err != nil {
-		response.Error(w, http.StatusBadRequest, "Invalid session ID")
-		return
-	}
-
-	result, err := h.DB.Sessions.DeleteOne(r.Context(), bson.M{
-		"_id":     sessionID,
-		"user_id": session.UserID,
-	})
+	deleted, err := h.SessionStore.DeleteByUserAndID(r.Context(), sess.UserID, req.SessionID)
 	if err != nil {
 		log.Error("Failed to revoke session: ", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to revoke session")
 		return
 	}
 
-	if result.DeletedCount == 0 {
+	if !deleted {
 		response.Error(w, http.StatusNotFound, "Session not found")
 		return
 	}
@@ -205,11 +190,11 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) {
-	session := middleware.GetSessionFromContext(r.Context())
+	sess := middleware.GetSessionFromContext(r.Context())
 	user := middleware.GetUserFromContext(r.Context())
 
 	// If no session/user (using OptionalAuth middleware), return null
-	if session == nil || user == nil {
+	if sess == nil || user == nil {
 		response.JSON(w, http.StatusOK, nil)
 		return
 	}
@@ -234,11 +219,11 @@ func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) 
 
 	response.JSON(w, http.StatusOK, map[string]any{
 		"session": models.SessionListItem{
-			ID:        session.ID,
-			IPAddress: session.IPAddress,
-			UserAgent: session.UserAgent,
-			ExpiresAt: session.ExpiresAt,
-			CreatedAt: session.CreatedAt,
+			ID:        sess.ID,
+			IPAddress: sess.IPAddress,
+			UserAgent: sess.UserAgent,
+			ExpiresAt: sess.ExpiresAt,
+			CreatedAt: sess.CreatedAt,
 			IsCurrent: true,
 		},
 		"user":        user,
@@ -247,30 +232,25 @@ func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-func (h *AuthHandler) createSession(r *http.Request, userID bson.ObjectID) (*models.Session, string, error) {
+func (h *AuthHandler) createSession(r *http.Request, userID string) (*session.Session, string, error) {
 	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days
 
-	session := models.Session{
+	sess, err := h.SessionStore.Create(r.Context(), session.CreateParams{
 		UserID:    userID,
 		IPAddress: auth.GetClientIP(r),
 		UserAgent: r.UserAgent(),
 		ExpiresAt: expiresAt,
-		CreatedAt: time.Now(),
-	}
-
-	result, err := h.DB.Sessions.InsertOne(r.Context(), session)
+	})
 	if err != nil {
 		return nil, "", err
 	}
 
-	session.ID = result.InsertedID.(bson.ObjectID)
-
-	jwtToken, err := auth.GenerateSessionToken(session.ID.Hex(), userID.Hex(), expiresAt)
+	jwtToken, err := auth.GenerateSessionToken(sess.ID, userID, expiresAt)
 	if err != nil {
 		return nil, "", err
 	}
 
-	return &session, jwtToken, nil
+	return sess, jwtToken, nil
 }
 
 func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {

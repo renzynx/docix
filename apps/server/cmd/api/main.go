@@ -7,6 +7,7 @@ import (
 	"github.com/renzynx/docix/server/internal/database"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/server"
+	"github.com/renzynx/docix/server/internal/session"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,8 +26,11 @@ func main() {
 	// Initialize RBAC service
 	rbacService := rbac.NewService(db)
 
+	// Initialize session store (MongoDB for now, can swap for Redis later)
+	sessionStore := session.NewMongoStore(db.Sessions)
+
 	// Create and configure server
-	srv := server.New(db, rbacService, cfg)
+	srv := server.New(db, rbacService, sessionStore, cfg)
 
 	// Print banner
 	printBanner(srv.Addr())

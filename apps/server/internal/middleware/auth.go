@@ -10,6 +10,7 @@ import (
 	"github.com/renzynx/docix/server/internal/models"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/response"
+	"github.com/renzynx/docix/server/internal/session"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -21,7 +22,7 @@ const (
 	RBACContextKey    contextKey = "rbac"
 )
 
-func Auth(db *database.Database) func(http.Handler) http.Handler {
+func Auth(db *database.Database, sessionStore session.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(constants.SessionCookieName)
@@ -37,21 +38,26 @@ func Auth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			sessionID, err := bson.ObjectIDFromHex(claims.SessionID)
+			// Get session from store
+			sess, err := sessionStore.Get(r.Context(), claims.SessionID)
 			if err != nil {
-				response.Error(w, http.StatusUnauthorized, "Invalid session token")
+				response.Error(w, http.StatusInternalServerError, "Session lookup failed")
+				return
+			}
+			if sess == nil {
+				response.Error(w, http.StatusUnauthorized, "Invalid session")
 				return
 			}
 
-			var session models.Session
-			err = db.Sessions.FindOne(r.Context(), bson.M{"_id": sessionID}).Decode(&session)
+			// Get user from database
+			userID, err := bson.ObjectIDFromHex(sess.UserID)
 			if err != nil {
 				response.Error(w, http.StatusUnauthorized, "Invalid session")
 				return
 			}
 
 			var user models.User
-			err = db.Users.FindOne(r.Context(), bson.M{"_id": session.UserID}).Decode(&user)
+			err = db.Users.FindOne(r.Context(), bson.M{"_id": userID}).Decode(&user)
 			if err != nil {
 				response.Error(w, http.StatusUnauthorized, "User not found")
 				return
@@ -62,7 +68,7 @@ func Auth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), SessionContextKey, &session)
+			ctx := context.WithValue(r.Context(), SessionContextKey, sess)
 			ctx = context.WithValue(ctx, UserContextKey, &user)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -70,7 +76,7 @@ func Auth(db *database.Database) func(http.Handler) http.Handler {
 	}
 }
 
-func OptionalAuth(db *database.Database) func(http.Handler) http.Handler {
+func OptionalAuth(db *database.Database, sessionStore session.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(constants.SessionCookieName)
@@ -88,23 +94,23 @@ func OptionalAuth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			sessionID, err := bson.ObjectIDFromHex(claims.SessionID)
-			if err != nil {
-				// Invalid session ID, continue without auth
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			var session models.Session
-			err = db.Sessions.FindOne(r.Context(), bson.M{"_id": sessionID}).Decode(&session)
-			if err != nil {
+			// Get session from store
+			sess, err := sessionStore.Get(r.Context(), claims.SessionID)
+			if err != nil || sess == nil {
 				// Session not found, continue without auth
 				next.ServeHTTP(w, r)
 				return
 			}
 
+			// Get user from database
+			userID, err := bson.ObjectIDFromHex(sess.UserID)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			var user models.User
-			err = db.Users.FindOne(r.Context(), bson.M{"_id": session.UserID}).Decode(&user)
+			err = db.Users.FindOne(r.Context(), bson.M{"_id": userID}).Decode(&user)
 			if err != nil {
 				// User not found, continue without auth
 				next.ServeHTTP(w, r)
@@ -117,7 +123,7 @@ func OptionalAuth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), SessionContextKey, &session)
+			ctx := context.WithValue(r.Context(), SessionContextKey, sess)
 			ctx = context.WithValue(ctx, UserContextKey, &user)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -230,7 +236,7 @@ func GetUserFromContext(ctx context.Context) *models.User {
 	return user
 }
 
-func GetSessionFromContext(ctx context.Context) *models.Session {
-	session, _ := ctx.Value(SessionContextKey).(*models.Session)
-	return session
+func GetSessionFromContext(ctx context.Context) *session.Session {
+	sess, _ := ctx.Value(SessionContextKey).(*session.Session)
+	return sess
 }
