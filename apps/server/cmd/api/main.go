@@ -13,25 +13,18 @@ import (
 func main() {
 	log.SetReportCaller(true)
 
-	// Load configuration
 	cfg := config.Load()
 
-	// Initialize database
 	db, err := database.New()
 	if err != nil {
 		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 
-	// Initialize RBAC service
 	rbacService := rbac.NewService(db)
-
-	// Create and configure server
 	srv := server.New(db, rbacService, cfg)
 
-	// Print banner
 	printBanner(srv.Addr())
 
-	// Run server (blocks until shutdown)
 	if err := srv.Run(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}

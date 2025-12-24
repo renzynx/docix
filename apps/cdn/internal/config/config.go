@@ -27,7 +27,6 @@ func Load() *Config {
 
 	hmacSecret := os.Getenv("HMAC_SECRET")
 	if hmacSecret == "" {
-		// In production, this should be set and match the main server
 		hmacSecret = "change-me-in-production"
 	}
 
@@ -52,7 +51,6 @@ func Load() *Config {
 	}
 }
 
-// DefaultExpiration returns the default expiration time for new signed URLs
 func (c *Config) DefaultExpiration() time.Time {
 	return time.Now().Add(time.Duration(c.URLTTLSecs) * time.Second)
 }

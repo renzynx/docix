@@ -27,7 +27,7 @@ func NewMangaHandler(db *database.Database) *MangaHandler {
 	}
 }
 
-// viewRateLimiter prevents duplicate view counts from the same IP
+// Prevents duplicate view counts from same IP within the rate limit window
 type viewRateLimiter struct {
 	mu       sync.RWMutex
 	views    map[string]time.Time
@@ -94,7 +94,6 @@ func (h *MangaHandler) IncrementSeriesView(w http.ResponseWriter, r *http.Reques
 	ipHash := hashIP(clientIP)
 
 	if !h.viewCache.canView("series", seriesID, ipHash) {
-		// Already viewed recently, return success without incrementing
 		response.JSON(w, http.StatusOK, map[string]string{
 			"message": "View already recorded",
 		})
@@ -137,14 +136,12 @@ func (h *MangaHandler) IncrementChapterView(w http.ResponseWriter, r *http.Reque
 	ipHash := hashIP(clientIP)
 
 	if !h.viewCache.canView("chapter", chapterID, ipHash) {
-		// Already viewed recently, return success without incrementing
 		response.JSON(w, http.StatusOK, map[string]string{
 			"message": "View already recorded",
 		})
 		return
 	}
 
-	// Get the chapter to find the series ID
 	var chapter struct {
 		SeriesID bson.ObjectID `bson:"series_id"`
 	}
@@ -163,13 +160,11 @@ func (h *MangaHandler) IncrementChapterView(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Also increment series view count
 	_, err = h.DB.Series.UpdateOne(r.Context(), bson.M{"_id": chapter.SeriesID}, bson.M{
 		"$inc": bson.M{"view_count": 1},
 	})
 	if err != nil {
 		log.Error("Failed to increment series view from chapter: ", err)
-		// Don't return error, chapter view was recorded successfully
 	}
 
 	response.JSON(w, http.StatusOK, map[string]string{

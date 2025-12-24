@@ -10,20 +10,17 @@ import (
 	"github.com/renzynx/docix/packages/go/redis"
 )
 
-// Task type constants (must match worker)
 const (
 	TypeImageConvert   = "image:convert"
 	TypeImageThumbnail = "image:thumbnail"
 )
 
-// Queue names
 const (
 	QueueCritical = "critical"
 	QueueDefault  = "default"
 	QueueLow      = "low"
 )
 
-// ImageConvertPayload matches the worker's expected payload
 type ImageConvertPayload struct {
 	UploadID         string `json:"upload_id"`
 	SourcePath       string `json:"source_path"`
@@ -41,7 +38,6 @@ var (
 	clientErr  error
 )
 
-// GetClient returns the singleton asynq client
 func GetClient() (*asynq.Client, error) {
 	clientOnce.Do(func() {
 		cfg := redis.LoadConfig()
@@ -58,7 +54,6 @@ func GetClient() (*asynq.Client, error) {
 	return client, clientErr
 }
 
-// Close closes the asynq client
 func Close() error {
 	if client != nil {
 		return client.Close()
@@ -66,7 +61,6 @@ func Close() error {
 	return nil
 }
 
-// EnqueueImageConvert enqueues an image conversion task
 func EnqueueImageConvert(payload ImageConvertPayload) (*asynq.TaskInfo, error) {
 	c, err := GetClient()
 	if err != nil {
@@ -88,7 +82,6 @@ func EnqueueImageConvert(payload ImageConvertPayload) (*asynq.TaskInfo, error) {
 	)
 }
 
-// EnqueueImageConvertCritical enqueues an image conversion task with high priority
 func EnqueueImageConvertCritical(payload ImageConvertPayload) (*asynq.TaskInfo, error) {
 	c, err := GetClient()
 	if err != nil {

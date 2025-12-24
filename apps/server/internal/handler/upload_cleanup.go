@@ -16,7 +16,6 @@ func (h *UploadHandler) CleanOrphanedFiles(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	uploadDir := h.config.Upload.Directory
 
-	// 1. Get all files in upload directory
 	files, err := os.ReadDir(uploadDir)
 	if err != nil {
 		log.Error("Failed to read upload directory: ", err)
@@ -31,10 +30,7 @@ func (h *UploadHandler) CleanOrphanedFiles(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// 2. Get all images used in DB (series covers)
 	usedFiles := make(map[string]bool)
-
-	// Fetch series covers - use projection to only specific field
 	seriesCursor, err := h.db.Series.Find(ctx, bson.M{}, options.Find().SetProjection(bson.M{"cover_image": 1}))
 	if err != nil {
 		log.Error("Failed to list series: ", err)
@@ -52,7 +48,6 @@ func (h *UploadHandler) CleanOrphanedFiles(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Fetch pages images
 	pageCursor, err := h.db.Pages.Find(ctx, bson.M{}, options.Find().SetProjection(bson.M{"image_url": 1}))
 	if err != nil {
 		log.Error("Failed to list pages: ", err)
@@ -70,7 +65,6 @@ func (h *UploadHandler) CleanOrphanedFiles(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// 3. Find and delete orphans
 	deletedCount := 0
 	reclaimedSpace := int64(0)
 

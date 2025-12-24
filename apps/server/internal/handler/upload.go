@@ -27,7 +27,6 @@ type UploadHandler struct {
 }
 
 func NewUploadHandler(db *database.Database, cfg *config.Config) *UploadHandler {
-	// Ensure upload directories exist
 	if err := os.MkdirAll(cfg.Upload.Directory, 0755); err != nil {
 		panic(fmt.Sprintf("failed to create upload directory: %v", err))
 	}
@@ -41,38 +40,31 @@ func NewUploadHandler(db *database.Database, cfg *config.Config) *UploadHandler 
 	}
 }
 
-// detectImageFormat detects image format from magic bytes
 func detectImageFormat(header []byte) string {
 	if len(header) < 12 {
 		return ""
 	}
 
-	// Check JPEG
 	if header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF {
 		return "jpeg"
 	}
 
-	// Check PNG
 	if header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47 {
 		return "png"
 	}
 
-	// Check GIF
 	if header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 {
 		return "gif"
 	}
 
-	// Check WebP (RIFF....WEBP)
 	if string(header[0:4]) == "RIFF" && string(header[8:12]) == "WEBP" {
 		return "webp"
 	}
 
-	// Check BMP
 	if header[0] == 0x42 && header[1] == 0x4D {
 		return "bmp"
 	}
 
-	// Check TIFF
 	if (header[0] == 0x49 && header[1] == 0x49) || (header[0] == 0x4D && header[1] == 0x4D) {
 		return "tiff"
 	}
@@ -99,7 +91,6 @@ func getExtension(format string) string {
 	}
 }
 
-// UploadFile handles file upload with async processing
 func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, h.config.Upload.MaxFileSize)
 
@@ -115,7 +106,6 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Read magic bytes
 	header := make([]byte, 12)
 	if _, err := io.ReadFull(file, header); err != nil {
 		response.Error(w, http.StatusBadRequest, "Failed to read file header")
@@ -128,7 +118,6 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If already WebP, save directly
 	if format == "webp" {
 		filename := uuid.New().String() + ".webp"
 		dstPath := filepath.Join(h.config.Upload.Directory, filename)
@@ -158,7 +147,6 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save to pending and enqueue for conversion
 	uploadID := uuid.New().String()
 	sourcePath := filepath.Join(h.config.Upload.PendingDirectory, uploadID+getExtension(format))
 	targetPath := filepath.Join(h.config.Upload.Directory, uploadID+".webp")
@@ -183,7 +171,6 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	dst.Close()
 
-	// Set status and enqueue
 	h.setUploadStatus(uploadID, "pending", fileHeader.Filename)
 
 	_, err = queue.EnqueueImageConvert(queue.ImageConvertPayload{
@@ -207,7 +194,6 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// UploadMultipleFiles handles bulk upload with async processing
 func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, h.config.Upload.MaxFileSize*100)
 
@@ -250,7 +236,6 @@ func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Reque
 		var status string
 
 		if format == "webp" {
-			// Save directly
 			dstPath := filepath.Join(h.config.Upload.Directory, uploadID+".webp")
 			dst, err := os.Create(dstPath)
 			if err != nil {
@@ -264,7 +249,6 @@ func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Reque
 			file.Close()
 			status = "completed"
 		} else {
-			// Save to pending and enqueue
 			sourcePath := filepath.Join(h.config.Upload.PendingDirectory, uploadID+getExtension(format))
 			targetPath := filepath.Join(h.config.Upload.Directory, uploadID+".webp")
 
@@ -299,7 +283,7 @@ func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Reque
 
 		responseID := uploadID
 		if status == "completed" {
-			responseID = uploadID + ".webp" // Return full filename for completed uploads
+			responseID = uploadID + ".webp"
 		}
 		uploads = append(uploads, models.AsyncUploadResponse{
 			UploadID: responseID,
@@ -318,7 +302,6 @@ func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// GetUploadStatus returns the status of an upload
 func (h *UploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Request) {
 	uploadID := chi.URLParam(r, "id")
 	if uploadID == "" {
@@ -326,7 +309,6 @@ func (h *UploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Check if completed file exists
 	if strings.HasSuffix(uploadID, ".webp") {
 		if _, err := os.Stat(filepath.Join(h.config.Upload.Directory, uploadID)); err == nil {
 			response.JSON(w, http.StatusOK, models.UploadStatusResponse{
@@ -338,7 +320,6 @@ func (h *UploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	// Check Redis
 	redisClient, err := redis.GetClient()
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Status store unavailable")

@@ -13,14 +13,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ImageHandler handles image processing tasks
 type ImageHandler struct {
 	processor *processor.ImageProcessor
 	redis     *redis.Client
 	logger    *logrus.Entry
 }
 
-// NewImageHandler creates a new image handler
 func NewImageHandler(proc *processor.ImageProcessor, redisClient *redis.Client, logger *logrus.Logger) *ImageHandler {
 	return &ImageHandler{
 		processor: proc,
@@ -29,7 +27,6 @@ func NewImageHandler(proc *processor.ImageProcessor, redisClient *redis.Client, 
 	}
 }
 
-// ProcessTask implements asynq.Handler interface
 func (h *ImageHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	switch t.Type() {
 	case tasks.TypeImageConvert:
@@ -41,7 +38,6 @@ func (h *ImageHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	}
 }
 
-// handleImageConvert handles image conversion tasks
 func (h *ImageHandler) handleImageConvert(ctx context.Context, t *asynq.Task) error {
 	payload, err := tasks.ParseImageConvertPayload(t)
 	if err != nil {
@@ -57,17 +53,14 @@ func (h *ImageHandler) handleImageConvert(ctx context.Context, t *asynq.Task) er
 
 	log.Info("Starting image conversion")
 
-	// Update status to processing
 	if err := h.updateUploadStatus(ctx, payload.UploadID, "processing", ""); err != nil {
 		log.WithError(err).Warn("Failed to update status to processing")
 	}
 
 	start := time.Now()
 
-	// Determine format
 	format := processor.FormatFromString(payload.TargetFormat)
 
-	// Perform conversion
 	result, err := h.processor.Convert(payload.SourcePath, payload.TargetPath, processor.ConvertOptions{
 		Quality:   payload.Quality,
 		Format:    format,
@@ -75,7 +68,6 @@ func (h *ImageHandler) handleImageConvert(ctx context.Context, t *asynq.Task) er
 		MaxHeight: payload.MaxHeight,
 	})
 	if err != nil {
-		// Update status to failed
 		if statusErr := h.updateUploadStatus(ctx, payload.UploadID, "failed", err.Error()); statusErr != nil {
 			log.WithError(statusErr).Warn("Failed to update status to failed")
 		}
@@ -93,19 +85,16 @@ func (h *ImageHandler) handleImageConvert(ctx context.Context, t *asynq.Task) er
 		"compression":    fmt.Sprintf("%.1f%%", float64(result.OutputSize)/float64(result.OriginalSize)*100),
 	}).Info("Image conversion completed")
 
-	// Update status to completed
 	if err := h.updateUploadStatusWithResult(ctx, payload.UploadID, result); err != nil {
 		log.WithError(err).Warn("Failed to update status to completed")
 	}
 
-	// Delete source file after successful conversion
 	if err := os.Remove(payload.SourcePath); err != nil {
 		log.WithError(err).Warn("Failed to delete source file")
 	} else {
 		log.Debug("Deleted source file")
 	}
 
-	// Write result to task
 	resultData := fmt.Sprintf(`{"path":"%s","size":%d,"width":%d,"height":%d}`,
 		result.OutputPath, result.OutputSize, result.Width, result.Height)
 	if _, err := t.ResultWriter().Write([]byte(resultData)); err != nil {
@@ -115,7 +104,6 @@ func (h *ImageHandler) handleImageConvert(ctx context.Context, t *asynq.Task) er
 	return nil
 }
 
-// handleImageThumbnail handles thumbnail generation tasks
 func (h *ImageHandler) handleImageThumbnail(ctx context.Context, t *asynq.Task) error {
 	payload, err := tasks.ParseImageThumbnailPayload(t)
 	if err != nil {
@@ -132,7 +120,6 @@ func (h *ImageHandler) handleImageThumbnail(ctx context.Context, t *asynq.Task) 
 
 	log.Info("Starting thumbnail generation")
 
-	// Perform conversion with resize
 	result, err := h.processor.Convert(payload.SourcePath, payload.TargetPath, processor.ConvertOptions{
 		Quality:   payload.Quality,
 		Format:    processor.FormatWebP,
@@ -152,7 +139,6 @@ func (h *ImageHandler) handleImageThumbnail(ctx context.Context, t *asynq.Task) 
 	return nil
 }
 
-// updateUploadStatus updates the upload status in Redis
 func (h *ImageHandler) updateUploadStatus(ctx context.Context, uploadID, status, errMsg string) error {
 	key := fmt.Sprintf("upload:%s", uploadID)
 
@@ -168,7 +154,6 @@ func (h *ImageHandler) updateUploadStatus(ctx context.Context, uploadID, status,
 	return h.redis.HSet(ctx, key, fields).Err()
 }
 
-// updateUploadStatusWithResult updates the upload status with conversion result
 func (h *ImageHandler) updateUploadStatusWithResult(ctx context.Context, uploadID string, result *processor.ConvertResult) error {
 	key := fmt.Sprintf("upload:%s", uploadID)
 

@@ -26,7 +26,6 @@ const (
 	sessionKeyPrefix             = "session:"
 )
 
-// Session represents a user session stored in Redis.
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`

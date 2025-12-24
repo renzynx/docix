@@ -61,7 +61,6 @@ func (h *MangaAdminHandler) AddPages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update chapter page count
 	h.DB.Chapters.UpdateOne(r.Context(),
 		bson.M{"_id": chapterObjID},
 		bson.M{
@@ -158,7 +157,6 @@ func (h *MangaAdminHandler) DeletePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update chapter page count
 	h.DB.Chapters.UpdateOne(r.Context(),
 		bson.M{"_id": page.ChapterID},
 		bson.M{
@@ -194,8 +192,7 @@ func (h *MangaAdminHandler) ReorderPages(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Two-phase update to avoid unique index conflicts on (chapter_id, number)
-	// Phase 1: Set all pages to temporary negative numbers
+	// Two-phase update: use temporary negative numbers to avoid unique index conflicts
 	for i, po := range req.PageOrders {
 		pageObjID, err := bson.ObjectIDFromHex(po.PageID)
 		if err != nil {
@@ -203,7 +200,6 @@ func (h *MangaAdminHandler) ReorderPages(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		// Use negative numbers as temporary values (-(i+1) to ensure uniqueness)
 		_, err = h.DB.Pages.UpdateOne(r.Context(),
 			bson.M{"_id": pageObjID, "chapter_id": chapterObjID},
 			bson.M{"$set": bson.M{"number": -(i + 1)}},
@@ -215,7 +211,6 @@ func (h *MangaAdminHandler) ReorderPages(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Phase 2: Set all pages to their final positive numbers
 	for _, po := range req.PageOrders {
 		pageObjID, err := bson.ObjectIDFromHex(po.PageID)
 		if err != nil {

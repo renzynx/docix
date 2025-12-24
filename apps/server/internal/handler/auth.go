@@ -30,7 +30,6 @@ const (
 	userSessionsKeyPrefix = "user_sessions:"
 )
 
-// Session represents a user session stored in Redis.
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
@@ -147,7 +146,6 @@ func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get session to find user ID for cleanup
 	sess, _ := h.getSession(r.Context(), claims.SessionID)
 	if sess != nil {
 		h.deleteSession(r.Context(), sess.ID, sess.UserID)
@@ -193,7 +191,6 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify session belongs to user
 	isMember, err := h.Redis.SIsMember(r.Context(), userSessionsKeyPrefix+sess.UserID, req.SessionID).Result()
 	if err != nil || !isMember {
 		response.Error(w, http.StatusNotFound, "Session not found")
@@ -247,8 +244,6 @@ func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) 
 		"roles":       roleNames,
 	})
 }
-
-// Redis session helpers
 
 func (h *AuthHandler) createSession(r *http.Request, userID string) (*Session, string, error) {
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
@@ -344,7 +339,6 @@ func (h *AuthHandler) listUserSessions(ctx context.Context, userID string) ([]Se
 		sessions = append(sessions, sess)
 	}
 
-	// Async cleanup of expired session IDs
 	if len(expiredIDs) > 0 {
 		go func() {
 			cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

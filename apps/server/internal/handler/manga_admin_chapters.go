@@ -100,7 +100,6 @@ func (h *MangaAdminHandler) CreateChapter(w http.ResponseWriter, r *http.Request
 
 	chapter.ID = result.InsertedID.(bson.ObjectID)
 
-	// Update series chapter count
 	h.DB.Series.UpdateOne(r.Context(),
 		bson.M{"_id": seriesObjID},
 		bson.M{
@@ -262,7 +261,6 @@ func (h *MangaAdminHandler) DeleteChapter(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Update series chapter count
 	h.DB.Series.UpdateOne(r.Context(),
 		bson.M{"_id": chapter.SeriesID},
 		bson.M{

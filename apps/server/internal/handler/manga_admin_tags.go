@@ -126,7 +126,6 @@ func (h *MangaAdminHandler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Remove tag from all series that have it
 	_, err = h.DB.Series.UpdateMany(r.Context(),
 		bson.M{"tag_ids": objID},
 		bson.M{"$pull": bson.M{"tag_ids": objID}},

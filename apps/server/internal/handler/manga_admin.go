@@ -9,11 +9,6 @@ import (
 	"github.com/renzynx/docix/server/internal/database"
 )
 
-// Methods are split across multiple files:
-//   - manga_admin_tags.go    - Tag CRUD
-//   - manga_admin_series.go  - Series CRUD
-//   - manga_admin_chapters.go - Chapter CRUD
-//   - manga_admin_pages.go   - Page CRUD
 type MangaAdminHandler struct {
 	DB     *database.Database
 	Signer *signing.Signer
@@ -23,8 +18,6 @@ func NewMangaAdminHandler(db *database.Database, signer *signing.Signer) *MangaA
 	return &MangaAdminHandler{DB: db, Signer: signer}
 }
 
-// signCoverImage generates a signed URL for a cover image filename.
-// Returns empty string if filename is empty.
 func (h *MangaAdminHandler) signCoverImage(filename string) string {
 	if filename == "" {
 		return ""

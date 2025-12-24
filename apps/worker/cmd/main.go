@@ -17,7 +17,6 @@ import (
 )
 
 func main() {
-	// Initialize logger
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
@@ -32,7 +31,6 @@ func main() {
 	log := logger.WithField("service", "worker")
 	log.Info("Starting image processing worker")
 
-	// Load configuration
 	cfg := config.Load()
 	log.WithFields(logrus.Fields{
 		"redis_addr":  cfg.RedisAddr,
@@ -42,14 +40,12 @@ func main() {
 		"webp_quality": cfg.WebPQuality,
 	}).Info("Configuration loaded")
 
-	// Initialize Redis client for status updates
 	redisClient, err := redis.GetClient()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to connect to Redis")
 	}
 	defer redisClient.Close()
 
-	// Test Redis connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		cancel()
@@ -58,7 +54,6 @@ func main() {
 	cancel()
 	log.Info("Redis connection established")
 
-	// Ensure upload directories exist
 	if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
 		log.WithError(err).Fatal("Failed to create upload directory")
 	}
@@ -66,14 +61,11 @@ func main() {
 		log.WithError(err).Fatal("Failed to create pending upload directory")
 	}
 
-	// Initialize image processor
 	imgProcessor := processor.NewImageProcessor(cfg.WebPQuality)
 	log.Info("Image processor initialized")
 
-	// Initialize handlers
 	imageHandler := handlers.NewImageHandler(imgProcessor, redisClient, logger)
 
-	// Configure asynq server
 	redisOpt := asynq.RedisClientOpt{
 		Addr:     cfg.RedisAddr,
 		Password: cfg.RedisPassword,
@@ -97,13 +89,11 @@ func main() {
 		LogLevel: asynq.InfoLevel,
 	})
 
-	// Setup task router
 	mux := asynq.NewServeMux()
 	mux.Use(loggingMiddleware(logger))
 	mux.Handle(tasks.TypeImageConvert, imageHandler)
 	mux.Handle(tasks.TypeImageThumbnail, imageHandler)
 
-	// Handle graceful shutdown
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -112,7 +102,6 @@ func main() {
 		srv.Shutdown()
 	}()
 
-	// Start server
 	log.Info("Worker is ready to process tasks")
 	if err := srv.Run(mux); err != nil {
 		log.WithError(err).Fatal("Failed to run server")
@@ -121,7 +110,6 @@ func main() {
 	log.Info("Worker shutdown complete")
 }
 
-// loggingMiddleware logs task processing
 func loggingMiddleware(logger *logrus.Logger) func(asynq.Handler) asynq.Handler {
 	return func(h asynq.Handler) asynq.Handler {
 		return asynq.HandlerFunc(func(ctx context.Context, t *asynq.Task) error {
@@ -151,7 +139,6 @@ func loggingMiddleware(logger *logrus.Logger) func(asynq.Handler) asynq.Handler 
 	}
 }
 
-// asynqLogAdapter adapts logrus to asynq's logger interface
 type asynqLogAdapter struct {
 	logger *logrus.Logger
 }

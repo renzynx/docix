@@ -33,7 +33,6 @@ func (h *MangaAdminHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{}
 	if status != "" {
-		// Valid status values
 		validStatuses := map[string]bool{
 			"ongoing":   true,
 			"completed": true,
@@ -51,7 +50,6 @@ func (h *MangaAdminHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	sortField := "created_at"
 	sortOrder := -1
 	if sortBy != "" {
-		// Valid sort fields
 		switch sortBy {
 		case "title", "created_at", "updated_at", "view_count", "chapter_count":
 			sortField = sortBy
@@ -89,9 +87,7 @@ func (h *MangaAdminHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Populate tags for each series and sign cover images
 	for i := range seriesList {
-		// Sign cover image URL
 		seriesList[i].CoverImageURL = h.signCoverImage(seriesList[i].CoverImage)
 
 		if len(seriesList[i].TagIDs) > 0 {
@@ -167,7 +163,6 @@ func (h *MangaAdminHandler) CreateSeries(w http.ResponseWriter, r *http.Request)
 
 	series.ID = result.InsertedID.(bson.ObjectID)
 
-	// Populate tags
 	if len(tagIDs) > 0 {
 		tagCursor, err := h.DB.Tags.Find(r.Context(), bson.M{"_id": bson.M{"$in": tagIDs}})
 		if err == nil {
@@ -179,7 +174,6 @@ func (h *MangaAdminHandler) CreateSeries(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Sign cover image URL
 	series.CoverImageURL = h.signCoverImage(series.CoverImage)
 
 	response.JSON(w, http.StatusCreated, series)
@@ -210,7 +204,6 @@ func (h *MangaAdminHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Populate tags
 	if len(series.TagIDs) > 0 {
 		tagCursor, err := h.DB.Tags.Find(r.Context(), bson.M{"_id": bson.M{"$in": series.TagIDs}})
 		if err == nil {
@@ -222,7 +215,6 @@ func (h *MangaAdminHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Sign cover image URL
 	series.CoverImageURL = h.signCoverImage(series.CoverImage)
 
 	response.JSON(w, http.StatusOK, series)
@@ -296,11 +288,9 @@ func (h *MangaAdminHandler) UpdateSeries(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Return updated series
 	var series models.Series
 	h.DB.Series.FindOne(r.Context(), bson.M{"_id": objID}).Decode(&series)
 
-	// Populate tags
 	if len(series.TagIDs) > 0 {
 		tagCursor, err := h.DB.Tags.Find(r.Context(), bson.M{"_id": bson.M{"$in": series.TagIDs}})
 		if err == nil {
@@ -312,7 +302,6 @@ func (h *MangaAdminHandler) UpdateSeries(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Sign cover image URL
 	series.CoverImageURL = h.signCoverImage(series.CoverImage)
 
 	response.JSON(w, http.StatusOK, series)
@@ -331,12 +320,10 @@ func (h *MangaAdminHandler) DeleteSeries(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get all chapters for this series
 	chapterCursor, err := h.DB.Chapters.Find(r.Context(), bson.M{"series_id": objID})
 	if err == nil {
 		var chapters []models.Chapter
 		if err := chapterCursor.All(r.Context(), &chapters); err == nil {
-			// Delete all pages for each chapter
 			for _, chapter := range chapters {
 				h.DB.Pages.DeleteMany(r.Context(), bson.M{"chapter_id": chapter.ID})
 			}
@@ -344,13 +331,10 @@ func (h *MangaAdminHandler) DeleteSeries(w http.ResponseWriter, r *http.Request)
 		chapterCursor.Close(r.Context())
 	}
 
-	// Delete all chapters
 	h.DB.Chapters.DeleteMany(r.Context(), bson.M{"series_id": objID})
 
-	// Delete all bookmarks for this series
 	h.DB.Bookmarks.DeleteMany(r.Context(), bson.M{"series_id": objID})
 
-	// Delete the series
 	result, err := h.DB.Series.DeleteOne(r.Context(), bson.M{"_id": objID})
 	if err != nil {
 		log.Error("Failed to delete series: ", err)

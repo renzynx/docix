@@ -16,7 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Server encapsulates the HTTP server and its dependencies.
 type Server struct {
 	httpServer  *http.Server
 	router      *chi.Mux
@@ -25,7 +24,6 @@ type Server struct {
 	cfg         *config.Config
 }
 
-// New creates a new Server instance with all dependencies.
 func New(db *database.Database, rbacService *rbac.Service, cfg *config.Config) *Server {
 	router := chi.NewRouter()
 
@@ -36,10 +34,8 @@ func New(db *database.Database, rbacService *rbac.Service, cfg *config.Config) *
 		cfg:         cfg,
 	}
 
-	// Setup routes
 	SetupRoutes(router, db, rbacService)
 
-	// Create HTTP server
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Handler:      router,
@@ -51,22 +47,17 @@ func New(db *database.Database, rbacService *rbac.Service, cfg *config.Config) *
 	return s
 }
 
-// Run starts the server and blocks until shutdown signal is received.
 func (s *Server) Run() error {
-	// Channel to listen for errors from ListenAndServe
 	serverErrors := make(chan error, 1)
 
-	// Start the server
 	go func() {
 		log.Infof("API server starting on %s", s.httpServer.Addr)
 		serverErrors <- s.httpServer.ListenAndServe()
 	}()
 
-	// Channel to listen for interrupt/terminate signals
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
-	// Block until we receive a signal or an error
 	select {
 	case err := <-serverErrors:
 		if err != nil && err != http.ErrServerClosed {
@@ -83,17 +74,14 @@ func (s *Server) Run() error {
 	return nil
 }
 
-// Shutdown gracefully shuts down the server.
 func (s *Server) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Shutdown HTTP server
 	if err := s.httpServer.Shutdown(ctx); err != nil {
 		log.Errorf("HTTP server shutdown error: %v", err)
 	}
 
-	// Disconnect database
 	if err := s.db.Disconnect(ctx); err != nil {
 		log.Errorf("Database disconnect error: %v", err)
 		return err
@@ -103,7 +91,6 @@ func (s *Server) Shutdown() error {
 	return nil
 }
 
-// Addr returns the server address.
 func (s *Server) Addr() string {
 	return s.httpServer.Addr
 }

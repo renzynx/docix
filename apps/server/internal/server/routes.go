@@ -20,7 +20,6 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 	r.Use(chimiddleware.StripSlashes)
 	r.Use(middleware.CORS())
 
-	// Create URL signer for CDN
 	signer := signing.NewSigner(
 		cfg.CDN.HMACSecret,
 		cfg.CDN.BaseURL,
@@ -61,7 +60,6 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 		})
 	})
 
-	// Bookmark routes (authenticated)
 	r.Route("/bookmarks", func(router chi.Router) {
 		router.Use(middleware.Auth(db))
 		router.Get("/", bookmarkHandler.ListBookmarks)
@@ -77,7 +75,6 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 		router.Post("/{id}/view", mangaHandler.IncrementChapterView)
 	})
 
-	// Public manga routes (read-only, no auth required)
 	r.Route("/manga", func(router chi.Router) {
 		router.Get("/", mangaPublicHandler.ListSeries)
 		router.Get("/{slug}", mangaPublicHandler.GetSeriesBySlug)
@@ -92,7 +89,6 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 
 		router.Get("/permissions", adminHandler.GetPermissions)
 
-		// Upload routes
 		router.Route("/upload", func(r chi.Router) {
 			r.Post("/", uploadHandler.UploadFile)
 			r.Post("/bulk", uploadHandler.UploadMultipleFiles)
@@ -117,7 +113,6 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 			r.Post("/unban/{id}", adminHandler.UnbanUser)
 		})
 
-		// Tag management routes
 		router.Route("/tags", func(r chi.Router) {
 			r.Use(middleware.RequirePermission(rbacService, constants.PermMangaManageTags))
 			r.Get("/", mangaAdminHandler.ListTags)

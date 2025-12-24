@@ -16,7 +16,6 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Ensure upload directory exists
 	if _, err := os.Stat(cfg.UploadDir); os.IsNotExist(err) {
 		log.Printf("Upload directory %s does not exist, creating...", cfg.UploadDir)
 		if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
@@ -28,24 +27,20 @@ func main() {
 
 	r := chi.NewRouter()
 
-	// Middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Compress(5))
 
-	// Routes
 	r.Get("/health", h.Health)
 	r.Options("/*", h.CORS)
 	r.Get("/*", h.ServeImage)
 
-	// Server
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: r,
 	}
 
-	// Graceful shutdown
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 

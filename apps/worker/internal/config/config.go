@@ -7,29 +7,22 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-// Config holds worker configuration
 type Config struct {
-	// Redis connection settings
 	RedisAddr     string
 	RedisPassword string
 	RedisDB       int
 
-	// Worker settings
 	Concurrency int
 
-	// Queue priorities (higher = more priority)
 	Queues map[string]int
 
-	// Upload directories
-	UploadDir        string // Final upload directory
-	PendingUploadDir string // Temporary pending directory
+	UploadDir        string
+	PendingUploadDir string
 
-	// Image processing settings
-	WebPQuality int  // 1-100, default 85
-	MaxFileSize int64 // Maximum file size in bytes
+	WebPQuality int
+	MaxFileSize int64
 }
 
-// DefaultConfig returns a Config with sensible defaults
 func DefaultConfig() *Config {
 	return &Config{
 		RedisAddr:        "localhost:6379",
@@ -48,11 +41,9 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Load loads configuration from environment variables
 func Load() *Config {
 	cfg := DefaultConfig()
 
-	// Redis settings
 	if addr := os.Getenv("REDIS_HOST"); addr != "" {
 		port := os.Getenv("REDIS_PORT")
 		if port == "" {
@@ -62,7 +53,6 @@ func Load() *Config {
 	}
 
 	if url := os.Getenv("REDIS_URL"); url != "" {
-		// For URL, asynq will parse it directly
 		cfg.RedisAddr = url
 	}
 
@@ -74,14 +64,12 @@ func Load() *Config {
 		}
 	}
 
-	// Worker settings
 	if concStr := os.Getenv("WORKER_CONCURRENCY"); concStr != "" {
 		if conc, err := strconv.Atoi(concStr); err == nil && conc > 0 {
 			cfg.Concurrency = conc
 		}
 	}
 
-	// Upload directories
 	if dir := os.Getenv("UPLOAD_DIR"); dir != "" {
 		cfg.UploadDir = dir
 	}
@@ -92,7 +80,6 @@ func Load() *Config {
 		cfg.PendingUploadDir = cfg.UploadDir + "/pending"
 	}
 
-	// Image processing settings
 	if qualityStr := os.Getenv("WEBP_QUALITY"); qualityStr != "" {
 		if quality, err := strconv.Atoi(qualityStr); err == nil && quality >= 1 && quality <= 100 {
 			cfg.WebPQuality = quality
@@ -108,14 +95,11 @@ func Load() *Config {
 	return cfg
 }
 
-// GetRedisOpt returns asynq-compatible Redis options
 func (c *Config) GetRedisOpt() interface{} {
-	// Check if it's a URL
 	if len(c.RedisAddr) > 8 && c.RedisAddr[:8] == "redis://" {
 		return c.RedisAddr
 	}
 
-	// Return structured options
 	return struct {
 		Addr     string
 		Password string

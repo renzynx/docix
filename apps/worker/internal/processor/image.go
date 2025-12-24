@@ -8,7 +8,6 @@ import (
 	"github.com/h2non/bimg"
 )
 
-// ImageFormat represents supported image formats
 type ImageFormat int
 
 const (
@@ -18,12 +17,10 @@ const (
 	FormatAVIF
 )
 
-// ImageProcessor handles image conversion and manipulation
 type ImageProcessor struct {
 	defaultQuality int
 }
 
-// NewImageProcessor creates a new image processor
 func NewImageProcessor(defaultQuality int) *ImageProcessor {
 	if defaultQuality <= 0 || defaultQuality > 100 {
 		defaultQuality = 85
@@ -33,15 +30,13 @@ func NewImageProcessor(defaultQuality int) *ImageProcessor {
 	}
 }
 
-// ConvertOptions holds options for image conversion
 type ConvertOptions struct {
-	Quality   int         // 1-100, 0 uses default
-	Format    ImageFormat // Target format
-	MaxWidth  int         // Maximum width (0 = no resize)
-	MaxHeight int         // Maximum height (0 = no resize)
+	Quality   int
+	Format    ImageFormat
+	MaxWidth  int
+	MaxHeight int
 }
 
-// ConvertResult holds the result of image conversion
 type ConvertResult struct {
 	OutputPath   string
 	OriginalSize int64
@@ -51,42 +46,34 @@ type ConvertResult struct {
 	Format       string
 }
 
-// Convert converts an image file to the specified format
 func (p *ImageProcessor) Convert(sourcePath, targetPath string, opts ConvertOptions) (*ConvertResult, error) {
-	// Read source file
 	buffer, err := bimg.Read(sourcePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read source file: %w", err)
 	}
 
-	// Get original file size
 	sourceInfo, err := os.Stat(sourcePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat source file: %w", err)
 	}
 
-	// Create bimg image
 	img := bimg.NewImage(buffer)
 
-	// Get original dimensions
 	size, err := img.Size()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image size: %w", err)
 	}
 
-	// Determine quality
 	quality := opts.Quality
 	if quality <= 0 || quality > 100 {
 		quality = p.defaultQuality
 	}
 
-	// Build processing options
 	processOpts := bimg.Options{
 		Quality: quality,
 		Type:    p.toBimgType(opts.Format),
 	}
 
-	// Handle resizing if needed
 	if opts.MaxWidth > 0 || opts.MaxHeight > 0 {
 		newWidth, newHeight := p.calculateDimensions(
 			size.Width, size.Height,
@@ -98,30 +85,25 @@ func (p *ImageProcessor) Convert(sourcePath, targetPath string, opts ConvertOpti
 		}
 	}
 
-	// Process the image
 	newImage, err := img.Process(processOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process image: %w", err)
 	}
 
-	// Ensure target directory exists
 	targetDir := filepath.Dir(targetPath)
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create target directory: %w", err)
 	}
 
-	// Write output file
 	if err := bimg.Write(targetPath, newImage); err != nil {
 		return nil, fmt.Errorf("failed to write output file: %w", err)
 	}
 
-	// Get output file info
 	outputInfo, err := os.Stat(targetPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat output file: %w", err)
 	}
 
-	// Get new dimensions
 	newImg := bimg.NewImage(newImage)
 	newSize, _ := newImg.Size()
 
@@ -135,7 +117,6 @@ func (p *ImageProcessor) Convert(sourcePath, targetPath string, opts ConvertOpti
 	}, nil
 }
 
-// ConvertToWebP is a convenience method to convert an image to WebP
 func (p *ImageProcessor) ConvertToWebP(sourcePath, targetPath string, quality int) (*ConvertResult, error) {
 	return p.Convert(sourcePath, targetPath, ConvertOptions{
 		Quality: quality,
@@ -143,7 +124,6 @@ func (p *ImageProcessor) ConvertToWebP(sourcePath, targetPath string, quality in
 	})
 }
 
-// IsSupported checks if a file format is supported for reading
 func (p *ImageProcessor) IsSupported(path string) bool {
 	buffer, err := bimg.Read(path)
 	if err != nil {
@@ -152,7 +132,6 @@ func (p *ImageProcessor) IsSupported(path string) bool {
 	return bimg.DetermineImageType(buffer) != bimg.UNKNOWN
 }
 
-// GetImageInfo returns information about an image file
 func (p *ImageProcessor) GetImageInfo(path string) (width, height int, format string, err error) {
 	buffer, err := bimg.Read(path)
 	if err != nil {
@@ -169,7 +148,6 @@ func (p *ImageProcessor) GetImageInfo(path string) (width, height int, format st
 	return size.Width, size.Height, p.bimgTypeName(imgType), nil
 }
 
-// toBimgType converts our format to bimg type
 func (p *ImageProcessor) toBimgType(format ImageFormat) bimg.ImageType {
 	switch format {
 	case FormatWebP:
@@ -185,7 +163,6 @@ func (p *ImageProcessor) toBimgType(format ImageFormat) bimg.ImageType {
 	}
 }
 
-// formatName returns the string name of a format
 func (p *ImageProcessor) formatName(format ImageFormat) string {
 	switch format {
 	case FormatWebP:
@@ -201,7 +178,6 @@ func (p *ImageProcessor) formatName(format ImageFormat) string {
 	}
 }
 
-// bimgTypeName returns the string name of a bimg type
 func (p *ImageProcessor) bimgTypeName(t bimg.ImageType) string {
 	switch t {
 	case bimg.WEBP:
@@ -219,13 +195,11 @@ func (p *ImageProcessor) bimgTypeName(t bimg.ImageType) string {
 	}
 }
 
-// calculateDimensions calculates new dimensions maintaining aspect ratio
 func (p *ImageProcessor) calculateDimensions(origWidth, origHeight, maxWidth, maxHeight int) (int, int) {
 	if maxWidth <= 0 && maxHeight <= 0 {
 		return origWidth, origHeight
 	}
 
-	// Calculate ratios
 	widthRatio := float64(1)
 	heightRatio := float64(1)
 
@@ -236,13 +210,11 @@ func (p *ImageProcessor) calculateDimensions(origWidth, origHeight, maxWidth, ma
 		heightRatio = float64(maxHeight) / float64(origHeight)
 	}
 
-	// Use the smaller ratio to maintain aspect ratio
 	ratio := widthRatio
 	if heightRatio < widthRatio {
 		ratio = heightRatio
 	}
 
-	// Don't upscale
 	if ratio >= 1 {
 		return origWidth, origHeight
 	}
@@ -253,7 +225,6 @@ func (p *ImageProcessor) calculateDimensions(origWidth, origHeight, maxWidth, ma
 	return newWidth, newHeight
 }
 
-// FormatFromString converts a string to ImageFormat
 func FormatFromString(s string) ImageFormat {
 	switch s {
 	case "webp":
