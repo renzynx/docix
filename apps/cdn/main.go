@@ -16,11 +16,18 @@ import (
 func main() {
 	cfg := config.Load()
 
-	if _, err := os.Stat(cfg.UploadDir); os.IsNotExist(err) {
-		log.Printf("Upload directory %s does not exist, creating...", cfg.UploadDir)
-		if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
-			log.Fatalf("Failed to create upload directory: %v", err)
+	info, err := os.Stat(cfg.UploadDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("Upload directory %s does not exist, creating...", cfg.UploadDir)
+			if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
+				log.Fatalf("Failed to create upload directory: %v", err)
+			}
+		} else {
+			log.Fatalf("Failed to stat upload directory %s: %v", cfg.UploadDir, err)
 		}
+	} else if !info.IsDir() {
+		log.Fatalf("Upload path %s exists but is not a directory", cfg.UploadDir)
 	}
 
 	h := handler.New(cfg)
