@@ -32,10 +32,6 @@ type CDNConfig struct {
 	URLTTLSecs int64  // URL expiration time in seconds
 }
 
-type SessionConfig struct {
-	Store string // "mongo" or "redis" (default: "mongo")
-}
-
 type Config struct {
 	Host            string
 	Port            int
@@ -46,7 +42,6 @@ type Config struct {
 	SMTP            SMTPConfig
 	Upload          UploadConfig
 	CDN             CDNConfig
-	Session         SessionConfig
 }
 
 var cfg *Config
@@ -99,7 +94,6 @@ func Load() *Config {
 		SMTP:            loadSMTPConfig(),
 		Upload:          loadUploadConfig(),
 		CDN:             loadCDNConfig(),
-		Session:         loadSessionConfig(),
 	}
 
 	return cfg
@@ -200,21 +194,5 @@ func loadCDNConfig() CDNConfig {
 		BaseURL:    baseURL,
 		HMACSecret: hmacSecret,
 		URLTTLSecs: urlTTLSecs,
-	}
-}
-
-func loadSessionConfig() SessionConfig {
-	store := os.Getenv("SESSION_STORE")
-	if store == "" {
-		store = "redis" // Default to Redis
-	}
-
-	// Validate store value
-	if store != "mongo" && store != "redis" {
-		store = "redis"
-	}
-
-	return SessionConfig{
-		Store: store,
 	}
 }
