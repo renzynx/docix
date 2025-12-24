@@ -130,6 +130,17 @@ func promoteToAdmin(email string) {
 	}
 
 	// Add admin role to user
+	// First ensure role_ids is an array (handles null case)
+	if user.RoleIDs == nil {
+		_, err = db.Users.UpdateOne(ctx,
+			bson.M{"_id": user.ID},
+			bson.M{"$set": bson.M{"role_ids": []bson.ObjectID{}}},
+		)
+		if err != nil {
+			log.Fatalf("Failed to initialize role_ids: %v", err)
+		}
+	}
+
 	_, err = db.Users.UpdateOne(ctx,
 		bson.M{"_id": user.ID},
 		bson.M{

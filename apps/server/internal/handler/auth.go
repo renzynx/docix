@@ -54,6 +54,7 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		Email:     req.Email,
 		Username:  strings.TrimSpace(req.Username),
 		Password:  string(hashedPassword),
+		RoleIDs:   []bson.ObjectID{},
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
