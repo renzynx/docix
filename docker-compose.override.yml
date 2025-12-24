@@ -1,0 +1,79 @@
+# Docker Compose Override for Development
+# This file is automatically loaded with docker-compose.yml
+# It adds hot-reload support by mounting source code and using air
+
+services:
+  # API Server with hot-reload
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile.dev
+    volumes:
+      - ./apps/server:/app/apps/server
+      - ./packages/go:/app/packages/go
+      - uploads_data:/data/uploads
+      - go_mod_cache:/go/pkg/mod
+    command: ["air", "-c", ".air.toml"]
+
+  # Worker with hot-reload
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile.dev
+    volumes:
+      - ./apps/worker:/app/apps/worker
+      - ./packages/go:/app/packages/go
+      - uploads_data:/data/uploads
+      - go_mod_cache:/go/pkg/mod
+    command: ["air", "-c", ".air.toml"]
+
+  # CDN with hot-reload
+  cdn:
+    build:
+      context: .
+      dockerfile: apps/cdn/Dockerfile.dev
+    volumes:
+      - ./apps/cdn:/app/apps/cdn
+      - ./packages/go:/app/packages/go
+      - uploads_data:/data/uploads:ro
+      - go_mod_cache:/go/pkg/mod
+    command: ["air", "-c", ".air.toml"]
+
+  # Web Frontend with hot-reload
+  web:
+    image: node:20-alpine
+    container_name: docix-web
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - ./packages:/packages
+      - web_node_modules:/app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    command: ["sh", "-c", "npm install && npm run dev"]
+    profiles:
+      - frontend
+
+  # Admin Frontend with hot-reload
+  admin:
+    image: node:20-alpine
+    container_name: docix-admin
+    working_dir: /app
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./apps/admin:/app
+      - ./packages:/packages
+      - admin_node_modules:/app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    command: ["sh", "-c", "npm install && npm run dev"]
+    profiles:
+      - frontend
+
+volumes:
+  go_mod_cache:
+  web_node_modules:
+  admin_node_modules:

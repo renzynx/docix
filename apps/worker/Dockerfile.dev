@@ -1,0 +1,29 @@
+# Development Dockerfile with hot-reload
+FROM golang:1.24-alpine
+
+# Install build dependencies for bimg/libvips
+RUN apk add --no-cache git vips-dev gcc musl-dev
+
+# Install air for hot-reload
+RUN go install github.com/air-verse/air@latest
+
+WORKDIR /app
+
+# Copy go.work and module files
+COPY go.work go.work.sum ./
+COPY apps/server/go.mod apps/server/go.sum ./apps/server/
+COPY apps/worker/go.mod apps/worker/go.sum ./apps/worker/
+COPY apps/cdn/go.mod apps/cdn/go.sum ./apps/cdn/
+COPY packages/go/go.mod packages/go/go.sum ./packages/go/
+COPY packages/go/redis/go.mod packages/go/redis/go.sum ./packages/go/redis/
+
+# Download dependencies
+RUN cd apps/worker && go mod download
+
+# Copy source (will be overwritten by volume mount in dev)
+COPY apps/worker ./apps/worker
+COPY packages/go ./packages/go
+
+WORKDIR /app/apps/worker
+
+CMD ["air", "-c", ".air.toml"]

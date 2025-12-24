@@ -53,3 +53,6 @@ tmp/
 
 # Uploads folder 
 uploads/
+
+# Local data directory (Docker volumes)
+data/

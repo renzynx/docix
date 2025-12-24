@@ -1,8 +1,4 @@
-# Docker Compose for Docix Development
-# Run: docker-compose up -d
-
 services:
-  # MongoDB database
   mongodb:
     image: mongo:7
     container_name: docix-mongodb
@@ -13,8 +9,12 @@ services:
     environment:
       MONGO_INITDB_DATABASE: docix
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Redis for queue and session storage
   redis:
     image: redis:7-alpine
     container_name: docix-redis
@@ -30,18 +30,105 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Commander (optional web UI for Redis)
-  # Uncomment to enable
-  # redis-commander:
-  #   image: rediscommander/redis-commander:latest
-  #   container_name: docix-redis-commander
-  #   environment:
-  #     - REDIS_HOSTS=local:redis:6379
-  #   ports:
-  #     - "8085:8081"
-  #   depends_on:
-  #     - redis
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: docix-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/data/uploads
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - GO_ENV=development
+      - AUTH_SECRET=${AUTH_SECRET:-dev-secret-change-in-production}
+      - TRUSTED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - MONGO_URL=mongodb://mongodb:27017/docix
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - UPLOAD_DIR=/data/uploads
+      - PENDING_UPLOAD_DIR=/data/uploads/pending
+      - CDN_BASE_URL=http://localhost:8081
+      - HMAC_SECRET=${HMAC_SECRET:-dev-hmac-secret}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: docix-worker
+    volumes:
+      - uploads_data:/data/uploads
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_CONCURRENCY=10
+      - UPLOAD_DIR=/data/uploads
+      - PENDING_UPLOAD_DIR=/data/uploads/pending
+      - WEBP_QUALITY=85
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # CDN / Image Server
+  cdn:
+    build:
+      context: .
+      dockerfile: apps/cdn/Dockerfile
+    container_name: docix-cdn
+    ports:
+      - "8081:8081"
+    volumes:
+      - uploads_data:/data/uploads:ro
+    environment:
+      - CDN_PORT=8081
+      - UPLOAD_DIR=/data/uploads
+      - HMAC_SECRET=${HMAC_SECRET:-dev-hmac-secret}
+      - URL_TTL_SECS=86400
+      - CDN_BASE_URL=http://localhost:8081
+    restart: unless-stopped
+
+  # Web Frontend (Next.js)
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: docix-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - server
+    restart: unless-stopped
+    profiles:
+      - frontend
+
+  # Admin Frontend (Next.js)
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    container_name: docix-admin
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - server
+    restart: unless-stopped
+    profiles:
+      - frontend
 
 volumes:
   mongodb_data:
   redis_data:
+  uploads_data:
