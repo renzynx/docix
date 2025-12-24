@@ -41,8 +41,13 @@ services:
       - "3000:3000"
     volumes:
       - .:/app
-      - pnpm_store:/root/.local/share/pnpm/store
+      # Exclude host pnpm-store and node_modules - use container volumes instead
+      - pnpm_store:/app/.pnpm-store
       - node_modules:/app/node_modules
+      - web_node_modules:/app/apps/web/node_modules
+      - admin_node_modules:/app/apps/admin/node_modules
+      - ui_node_modules:/app/packages/ui/node_modules
+      - types_node_modules:/app/packages/types/node_modules
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     command: ["sh", "-c", "corepack enable && pnpm install && pnpm --filter web dev"]
@@ -58,8 +63,13 @@ services:
       - "3001:3000"
     volumes:
       - .:/app
-      - pnpm_store:/root/.local/share/pnpm/store
+      # Exclude host pnpm-store and node_modules - use container volumes instead
+      - pnpm_store:/app/.pnpm-store
       - node_modules:/app/node_modules
+      - web_node_modules:/app/apps/web/node_modules
+      - admin_node_modules:/app/apps/admin/node_modules
+      - ui_node_modules:/app/packages/ui/node_modules
+      - types_node_modules:/app/packages/types/node_modules
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     command: ["sh", "-c", "corepack enable && pnpm install && pnpm --filter admin dev"]
@@ -70,3 +80,7 @@ volumes:
   go_mod_cache:
   pnpm_store:
   node_modules:
+  web_node_modules:
+  admin_node_modules:
+  ui_node_modules:
+  types_node_modules:
