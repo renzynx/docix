@@ -278,6 +278,29 @@ type UploadResponse struct {
 	Filename string `json:"filename"`
 }
 
+// AsyncUploadResponse is returned when an upload is queued for processing
+type AsyncUploadResponse struct {
+	UploadID string `json:"upload_id"`
+	Status   string `json:"status"`
+}
+
+// AsyncBulkUploadResponse is returned when multiple uploads are queued
+type AsyncBulkUploadResponse struct {
+	Uploads []AsyncUploadResponse `json:"uploads"`
+	Failed  []string              `json:"failed,omitempty"`
+}
+
+// UploadStatusResponse is returned when checking upload status
+type UploadStatusResponse struct {
+	UploadID  string `json:"upload_id"`
+	Status    string `json:"status"`
+	Filename  string `json:"filename,omitempty"`
+	Error     string `json:"error,omitempty"`
+	Width     int    `json:"width,omitempty"`
+	Height    int    `json:"height,omitempty"`
+	Size      int64  `json:"size,omitempty"`
+}
+
 type BulkUploadResponse struct {
 	Uploads []UploadResponse `json:"uploads"`
 	Failed  []string         `json:"failed,omitempty"`

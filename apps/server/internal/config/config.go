@@ -19,9 +19,11 @@ type SMTPConfig struct {
 }
 
 type UploadConfig struct {
-	Directory   string
-	MaxFileSize int64
-	BaseURL     string
+	Directory        string
+	PendingDirectory string
+	MaxFileSize      int64
+	BaseURL          string
+	WebPQuality      int
 }
 
 type CDNConfig struct {
@@ -137,6 +139,11 @@ func loadUploadConfig() UploadConfig {
 		directory = "./uploads"
 	}
 
+	pendingDirectory := os.Getenv("PENDING_UPLOAD_DIR")
+	if pendingDirectory == "" {
+		pendingDirectory = directory + "/pending"
+	}
+
 	maxFileSize := int64(10 * 1024 * 1024) // 10MB default
 	if sizeStr := os.Getenv("UPLOAD_MAX_SIZE"); sizeStr != "" {
 		if size, err := strconv.ParseInt(sizeStr, 10, 64); err == nil {
@@ -149,10 +156,19 @@ func loadUploadConfig() UploadConfig {
 		baseURL = "/uploads"
 	}
 
+	webpQuality := 85
+	if qualityStr := os.Getenv("WEBP_QUALITY"); qualityStr != "" {
+		if quality, err := strconv.Atoi(qualityStr); err == nil && quality >= 1 && quality <= 100 {
+			webpQuality = quality
+		}
+	}
+
 	return UploadConfig{
-		Directory:   directory,
-		MaxFileSize: maxFileSize,
-		BaseURL:     baseURL,
+		Directory:        directory,
+		PendingDirectory: pendingDirectory,
+		MaxFileSize:      maxFileSize,
+		BaseURL:          baseURL,
+		WebPQuality:      webpQuality,
 	}
 }
 

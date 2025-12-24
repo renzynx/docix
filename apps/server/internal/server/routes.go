@@ -96,6 +96,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 		router.Route("/upload", func(r chi.Router) {
 			r.Post("/", uploadHandler.UploadFile)
 			r.Post("/bulk", uploadHandler.UploadMultipleFiles)
+			r.Get("/{id}/status", uploadHandler.GetUploadStatus)
 			r.Delete("/cleanup", uploadHandler.CleanOrphanedFiles)
 		})
 
