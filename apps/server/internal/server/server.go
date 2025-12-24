@@ -13,34 +13,31 @@ import (
 	"github.com/renzynx/docix/server/internal/config"
 	"github.com/renzynx/docix/server/internal/database"
 	"github.com/renzynx/docix/server/internal/rbac"
-	"github.com/renzynx/docix/server/internal/session"
 	log "github.com/sirupsen/logrus"
 )
 
 // Server encapsulates the HTTP server and its dependencies.
 type Server struct {
-	httpServer   *http.Server
-	router       *chi.Mux
-	db           *database.Database
-	rbacService  *rbac.Service
-	sessionStore session.Store
-	cfg          *config.Config
+	httpServer  *http.Server
+	router      *chi.Mux
+	db          *database.Database
+	rbacService *rbac.Service
+	cfg         *config.Config
 }
 
 // New creates a new Server instance with all dependencies.
-func New(db *database.Database, rbacService *rbac.Service, sessionStore session.Store, cfg *config.Config) *Server {
+func New(db *database.Database, rbacService *rbac.Service, cfg *config.Config) *Server {
 	router := chi.NewRouter()
 
 	s := &Server{
-		router:       router,
-		db:           db,
-		rbacService:  rbacService,
-		sessionStore: sessionStore,
-		cfg:          cfg,
+		router:      router,
+		db:          db,
+		rbacService: rbacService,
+		cfg:         cfg,
 	}
 
 	// Setup routes
-	SetupRoutes(router, db, rbacService, sessionStore)
+	SetupRoutes(router, db, rbacService)
 
 	// Create HTTP server
 	s.httpServer = &http.Server{

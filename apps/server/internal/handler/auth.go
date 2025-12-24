@@ -1,10 +1,16 @@
 package handler
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	goredis "github.com/redis/go-redis/v9"
+	"github.com/renzynx/docix/packages/go/redis"
 	"github.com/renzynx/docix/server/internal/auth"
 	"github.com/renzynx/docix/server/internal/constants"
 	"github.com/renzynx/docix/server/internal/database"
@@ -12,7 +18,6 @@ import (
 	"github.com/renzynx/docix/server/internal/models"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/response"
-	"github.com/renzynx/docix/server/internal/session"
 	"github.com/renzynx/docix/server/internal/validator"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -20,17 +25,32 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthHandler struct {
-	DB           *database.Database
-	RBAC         *rbac.Service
-	SessionStore session.Store
+const (
+	sessionKeyPrefix      = "session:"
+	userSessionsKeyPrefix = "user_sessions:"
+)
+
+// Session represents a user session stored in Redis.
+type Session struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	IPAddress string    `json:"ip_address"`
+	UserAgent string    `json:"user_agent"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
-func NewAuthHandler(db *database.Database, rbacService *rbac.Service, sessionStore session.Store) *AuthHandler {
+type AuthHandler struct {
+	DB    *database.Database
+	RBAC  *rbac.Service
+	Redis *goredis.Client
+}
+
+func NewAuthHandler(db *database.Database, rbacService *rbac.Service) *AuthHandler {
 	return &AuthHandler{
-		DB:           db,
-		RBAC:         rbacService,
-		SessionStore: sessionStore,
+		DB:    db,
+		RBAC:  rbacService,
+		Redis: redis.MustGetClient(),
 	}
 }
 
@@ -127,9 +147,10 @@ func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.SessionStore.Delete(r.Context(), claims.SessionID)
-	if err != nil {
-		log.Error("Failed to delete session: ", err)
+	// Get session to find user ID for cleanup
+	sess, _ := h.getSession(r.Context(), claims.SessionID)
+	if sess != nil {
+		h.deleteSession(r.Context(), sess.ID, sess.UserID)
 	}
 
 	auth.ClearSessionCookie(w)
@@ -142,7 +163,7 @@ func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	sess := middleware.GetSessionFromContext(r.Context())
 
-	sessions, err := h.SessionStore.ListByUserID(r.Context(), sess.UserID)
+	sessions, err := h.listUserSessions(r.Context(), sess.UserID)
 	if err != nil {
 		log.Error("Failed to find sessions: ", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to list sessions")
@@ -172,17 +193,14 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted, err := h.SessionStore.DeleteByUserAndID(r.Context(), sess.UserID, req.SessionID)
-	if err != nil {
-		log.Error("Failed to revoke session: ", err)
-		response.Error(w, http.StatusInternalServerError, "Failed to revoke session")
-		return
-	}
-
-	if !deleted {
+	// Verify session belongs to user
+	isMember, err := h.Redis.SIsMember(r.Context(), userSessionsKeyPrefix+sess.UserID, req.SessionID).Result()
+	if err != nil || !isMember {
 		response.Error(w, http.StatusNotFound, "Session not found")
 		return
 	}
+
+	h.deleteSession(r.Context(), req.SessionID, sess.UserID)
 
 	response.JSON(w, http.StatusOK, map[string]string{
 		"message": "Session revoked successfully",
@@ -193,13 +211,11 @@ func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) 
 	sess := middleware.GetSessionFromContext(r.Context())
 	user := middleware.GetUserFromContext(r.Context())
 
-	// If no session/user (using OptionalAuth middleware), return null
 	if sess == nil || user == nil {
 		response.JSON(w, http.StatusOK, nil)
 		return
 	}
 
-	// Get user permissions and roles
 	var permissions []string
 	var roleNames []string
 
@@ -232,17 +248,34 @@ func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-func (h *AuthHandler) createSession(r *http.Request, userID string) (*session.Session, string, error) {
-	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days
+// Redis session helpers
 
-	sess, err := h.SessionStore.Create(r.Context(), session.CreateParams{
+func (h *AuthHandler) createSession(r *http.Request, userID string) (*Session, string, error) {
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	ttl := time.Until(expiresAt)
+
+	sess := &Session{
+		ID:        uuid.New().String(),
 		UserID:    userID,
 		IPAddress: auth.GetClientIP(r),
 		UserAgent: r.UserAgent(),
 		ExpiresAt: expiresAt,
-	})
+		CreatedAt: time.Now(),
+	}
+
+	data, err := json.Marshal(sess)
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("failed to marshal session: %w", err)
+	}
+
+	ctx := r.Context()
+	pipe := h.Redis.Pipeline()
+	pipe.Set(ctx, sessionKeyPrefix+sess.ID, data, ttl)
+	pipe.SAdd(ctx, userSessionsKeyPrefix+userID, sess.ID)
+	pipe.Expire(ctx, userSessionsKeyPrefix+userID, ttl+24*time.Hour)
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		return nil, "", fmt.Errorf("failed to create session: %w", err)
 	}
 
 	jwtToken, err := auth.GenerateSessionToken(sess.ID, userID, expiresAt)
@@ -251,6 +284,76 @@ func (h *AuthHandler) createSession(r *http.Request, userID string) (*session.Se
 	}
 
 	return sess, jwtToken, nil
+}
+
+func (h *AuthHandler) getSession(ctx context.Context, id string) (*Session, error) {
+	data, err := h.Redis.Get(ctx, sessionKeyPrefix+id).Bytes()
+	if err != nil {
+		if err == goredis.Nil {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var sess Session
+	if err := json.Unmarshal(data, &sess); err != nil {
+		return nil, err
+	}
+	return &sess, nil
+}
+
+func (h *AuthHandler) deleteSession(ctx context.Context, sessionID, userID string) {
+	pipe := h.Redis.Pipeline()
+	pipe.Del(ctx, sessionKeyPrefix+sessionID)
+	pipe.SRem(ctx, userSessionsKeyPrefix+userID, sessionID)
+	pipe.Exec(ctx)
+}
+
+func (h *AuthHandler) listUserSessions(ctx context.Context, userID string) ([]Session, error) {
+	sessionIDs, err := h.Redis.SMembers(ctx, userSessionsKeyPrefix+userID).Result()
+	if err != nil || len(sessionIDs) == 0 {
+		return nil, err
+	}
+
+	keys := make([]string, len(sessionIDs))
+	for i, id := range sessionIDs {
+		keys[i] = sessionKeyPrefix + id
+	}
+
+	values, err := h.Redis.MGet(ctx, keys...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []Session
+	var expiredIDs []string
+
+	for i, val := range values {
+		if val == nil {
+			expiredIDs = append(expiredIDs, sessionIDs[i])
+			continue
+		}
+		data, ok := val.(string)
+		if !ok {
+			continue
+		}
+		var sess Session
+		if err := json.Unmarshal([]byte(data), &sess); err != nil {
+			continue
+		}
+		sessions = append(sessions, sess)
+	}
+
+	// Async cleanup of expired session IDs
+	if len(expiredIDs) > 0 {
+		go func() {
+			cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			h.Redis.SRem(cleanupCtx, userSessionsKeyPrefix+userID, expiredIDs)
+		}()
+	}
+
+	return sessions, nil
 }
 
 func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +374,6 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		if username != "" {
 			updates["username"] = username
 		} else {
-			// Allow clearing username by setting to empty
 			updates["username"] = ""
 		}
 	}
@@ -280,7 +382,6 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		newEmail := strings.ToLower(strings.TrimSpace(*req.Email))
 
 		if newEmail != user.Email {
-			// Check if email is already taken
 			count, err := h.DB.Users.CountDocuments(r.Context(), bson.M{"email": newEmail})
 			if err != nil {
 				log.Error("Failed to check email: ", err)
@@ -292,7 +393,6 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// If user is verified, they need to verify the new email first
 			if user.VerifiedAt != nil {
 				token, err := auth.GenerateEmailVerificationToken(
 					user.ID.Hex(),
@@ -309,13 +409,11 @@ func (h *AuthHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 				resp["email_verification_token"] = token
 				resp["message"] = "Email change requires verification. Use the provided token to confirm."
 			} else {
-				// Unverified users can change email directly
 				updates["email"] = newEmail
 			}
 		}
 	}
 
-	// Apply updates if any
 	if len(updates) > 0 {
 		updates["updated_at"] = time.Now()
 		_, err := h.DB.Users.UpdateOne(r.Context(), bson.M{"_id": user.ID}, bson.M{"$set": updates})
@@ -365,7 +463,6 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify the token
 	payload, err := auth.VerifyEmailVerificationToken(req.Token)
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "Invalid or expired token")
@@ -389,7 +486,6 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	switch payload.Purpose {
 	case "verify":
-		// First-time email verification
 		if user.Email != payload.Email {
 			response.Error(w, http.StatusBadRequest, "Email has been changed since token was generated")
 			return
@@ -400,7 +496,6 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Mark as verified
 		_, err = h.DB.Users.UpdateOne(r.Context(), bson.M{"_id": userID}, bson.M{
 			"$set": bson.M{
 				"verified_at": now,
@@ -418,8 +513,6 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		})
 
 	case "change":
-		// Email change confirmation
-		// Check if email is still available
 		count, err := h.DB.Users.CountDocuments(r.Context(), bson.M{"email": payload.Email})
 		if err != nil {
 			log.Error("Failed to check email: ", err)
@@ -431,7 +524,6 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Update the email and re-verify
 		_, err = h.DB.Users.UpdateOne(r.Context(), bson.M{"_id": userID}, bson.M{
 			"$set": bson.M{
 				"email":       payload.Email,
@@ -467,13 +559,11 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prevent setting the same password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.NewPassword)); err == nil {
 		response.Error(w, http.StatusBadRequest, "New password must be different from current password")
 		return
 	}
 
-	// Hash new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("Failed to hash password: ", err)
@@ -481,7 +571,6 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update password in database
 	_, err = h.DB.Users.UpdateOne(r.Context(), bson.M{"_id": user.ID}, bson.M{
 		"$set": bson.M{
 			"password":   string(hashedPassword),

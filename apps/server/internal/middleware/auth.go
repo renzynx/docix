@@ -2,15 +2,18 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"time"
 
+	goredis "github.com/redis/go-redis/v9"
+	"github.com/renzynx/docix/packages/go/redis"
 	"github.com/renzynx/docix/server/internal/auth"
 	"github.com/renzynx/docix/server/internal/constants"
 	"github.com/renzynx/docix/server/internal/database"
 	"github.com/renzynx/docix/server/internal/models"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/response"
-	"github.com/renzynx/docix/server/internal/session"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -20,9 +23,22 @@ const (
 	UserContextKey    contextKey = "user"
 	SessionContextKey contextKey = "session"
 	RBACContextKey    contextKey = "rbac"
+	sessionKeyPrefix             = "session:"
 )
 
-func Auth(db *database.Database, sessionStore session.Store) func(http.Handler) http.Handler {
+// Session represents a user session stored in Redis.
+type Session struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	IPAddress string    `json:"ip_address"`
+	UserAgent string    `json:"user_agent"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func Auth(db *database.Database) func(http.Handler) http.Handler {
+	redisClient := redis.MustGetClient()
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(constants.SessionCookieName)
@@ -31,15 +47,14 @@ func Auth(db *database.Database, sessionStore session.Store) func(http.Handler) 
 				return
 			}
 
-			// Verify JWT and extract session claims
 			claims, err := auth.VerifySessionToken(cookie.Value)
 			if err != nil {
 				response.Error(w, http.StatusUnauthorized, "Invalid session token")
 				return
 			}
 
-			// Get session from store
-			sess, err := sessionStore.Get(r.Context(), claims.SessionID)
+			// Get session from Redis
+			sess, err := getSession(r.Context(), redisClient, claims.SessionID)
 			if err != nil {
 				response.Error(w, http.StatusInternalServerError, "Session lookup failed")
 				return
@@ -76,33 +91,29 @@ func Auth(db *database.Database, sessionStore session.Store) func(http.Handler) 
 	}
 }
 
-func OptionalAuth(db *database.Database, sessionStore session.Store) func(http.Handler) http.Handler {
+func OptionalAuth(db *database.Database) func(http.Handler) http.Handler {
+	redisClient := redis.MustGetClient()
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(constants.SessionCookieName)
 			if err != nil {
-				// No cookie, continue without auth
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Verify JWT and extract session claims
 			claims, err := auth.VerifySessionToken(cookie.Value)
 			if err != nil {
-				// Invalid token, continue without auth
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Get session from store
-			sess, err := sessionStore.Get(r.Context(), claims.SessionID)
+			sess, err := getSession(r.Context(), redisClient, claims.SessionID)
 			if err != nil || sess == nil {
-				// Session not found, continue without auth
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Get user from database
 			userID, err := bson.ObjectIDFromHex(sess.UserID)
 			if err != nil {
 				next.ServeHTTP(w, r)
@@ -112,13 +123,11 @@ func OptionalAuth(db *database.Database, sessionStore session.Store) func(http.H
 			var user models.User
 			err = db.Users.FindOne(r.Context(), bson.M{"_id": userID}).Decode(&user)
 			if err != nil {
-				// User not found, continue without auth
 				next.ServeHTTP(w, r)
 				return
 			}
 
 			if user.IsBanned {
-				// Banned user, continue without auth
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -129,6 +138,22 @@ func OptionalAuth(db *database.Database, sessionStore session.Store) func(http.H
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func getSession(ctx context.Context, client *goredis.Client, id string) (*Session, error) {
+	data, err := client.Get(ctx, sessionKeyPrefix+id).Bytes()
+	if err != nil {
+		if err == goredis.Nil {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var sess Session
+	if err := json.Unmarshal(data, &sess); err != nil {
+		return nil, err
+	}
+	return &sess, nil
 }
 
 func RequirePermission(rbacService *rbac.Service, permission string) func(http.Handler) http.Handler {
@@ -236,7 +261,7 @@ func GetUserFromContext(ctx context.Context) *models.User {
 	return user
 }
 
-func GetSessionFromContext(ctx context.Context) *session.Session {
-	sess, _ := ctx.Value(SessionContextKey).(*session.Session)
+func GetSessionFromContext(ctx context.Context) *Session {
+	sess, _ := ctx.Value(SessionContextKey).(*Session)
 	return sess
 }

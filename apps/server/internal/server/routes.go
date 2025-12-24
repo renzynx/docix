@@ -12,10 +12,9 @@ import (
 	"github.com/renzynx/docix/server/internal/handler"
 	"github.com/renzynx/docix/server/internal/middleware"
 	"github.com/renzynx/docix/server/internal/rbac"
-	"github.com/renzynx/docix/server/internal/session"
 )
 
-func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, sessionStore session.Store) {
+func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 	cfg := config.Get()
 
 	r.Use(chimiddleware.StripSlashes)
@@ -28,7 +27,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		time.Duration(cfg.CDN.URLTTLSecs)*time.Second,
 	)
 
-	authHandler := handler.NewAuthHandler(db, rbacService, sessionStore)
+	authHandler := handler.NewAuthHandler(db, rbacService)
 	adminHandler := handler.NewAdminHandler(db, rbacService)
 	mangaHandler := handler.NewMangaHandler(db)
 	mangaAdminHandler := handler.NewMangaAdminHandler(db, signer)
@@ -47,12 +46,12 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		router.Post("/verify-email", authHandler.VerifyEmail)
 
 		router.Group(func(r chi.Router) {
-			r.Use(middleware.OptionalAuth(db, sessionStore))
+			r.Use(middleware.OptionalAuth(db))
 			r.Get("/session", authHandler.GetCurrentSession)
 		})
 
 		router.Group(func(r chi.Router) {
-			r.Use(middleware.Auth(db, sessionStore))
+			r.Use(middleware.Auth(db))
 			r.Patch("/update-user", authHandler.UpdateUser)
 			r.Post("/change-password", authHandler.ChangePassword)
 			r.Post("/request-verification", authHandler.RequestEmailVerification)
@@ -64,7 +63,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 
 	// Bookmark routes (authenticated)
 	r.Route("/bookmarks", func(router chi.Router) {
-		router.Use(middleware.Auth(db, sessionStore))
+		router.Use(middleware.Auth(db))
 		router.Get("/", bookmarkHandler.ListBookmarks)
 		router.Get("/{seriesId}", bookmarkHandler.GetBookmarkStatus)
 		router.Post("/{seriesId}", bookmarkHandler.ToggleBookmark)
@@ -88,7 +87,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	r.Get("/tags", mangaPublicHandler.ListTags)
 
 	r.Route("/admin", func(router chi.Router) {
-		router.Use(middleware.Auth(db, sessionStore))
+		router.Use(middleware.Auth(db))
 		router.Use(middleware.RequirePermission(rbacService, constants.PermAdminPanel))
 
 		router.Get("/permissions", adminHandler.GetPermissions)
