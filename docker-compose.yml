@@ -1,0 +1,47 @@
+# Docker Compose for Docix Development
+# Run: docker-compose up -d
+
+services:
+  # MongoDB database
+  mongodb:
+    image: mongo:7
+    container_name: docix-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: docix
+    restart: unless-stopped
+
+  # Redis for queue and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: docix-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Commander (optional web UI for Redis)
+  # Uncomment to enable
+  # redis-commander:
+  #   image: rediscommander/redis-commander:latest
+  #   container_name: docix-redis-commander
+  #   environment:
+  #     - REDIS_HOSTS=local:redis:6379
+  #   ports:
+  #     - "8085:8081"
+  #   depends_on:
+  #     - redis
+
+volumes:
+  mongodb_data:
+  redis_data:

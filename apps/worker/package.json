@@ -1,0 +1,11 @@
+{
+	"name": "worker",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "air",
+		"build": "go build -o bin/worker ./cmd",
+		"start": "./bin/worker",
+		"clean": "rm -rf bin tmp"
+	}
+}
