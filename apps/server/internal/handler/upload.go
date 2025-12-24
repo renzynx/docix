@@ -297,8 +297,12 @@ func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Reque
 			status = "pending"
 		}
 
+		responseID := uploadID
+		if status == "completed" {
+			responseID = uploadID + ".webp" // Return full filename for completed uploads
+		}
 		uploads = append(uploads, models.AsyncUploadResponse{
-			UploadID: uploadID,
+			UploadID: responseID,
 			Status:   status,
 		})
 	}

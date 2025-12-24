@@ -1,20 +1,41 @@
 import { api } from "./api.generated";
 
 // ============================================================================
-// Upload API (manual - not generated)
+// Upload API Types
 // ============================================================================
 
 /**
- * Response from upload endpoint - returns just the filename
+ * Response from initial upload - returns upload_id and status
  */
-export interface UploadResponse {
-	filename: string;
+export interface AsyncUploadResponse {
+	upload_id: string;
+	status: "pending" | "completed";
 }
 
-export interface BulkUploadResponse {
-	uploads?: UploadResponse[];
+/**
+ * Response from bulk upload endpoint
+ */
+export interface AsyncBulkUploadResponse {
+	uploads: AsyncUploadResponse[];
 	failed?: string[];
 }
+
+/**
+ * Response from status polling endpoint
+ */
+export interface UploadStatusResponse {
+	upload_id: string;
+	status: "pending" | "processing" | "completed" | "failed";
+	filename?: string;
+	error?: string;
+	width?: number;
+	height?: number;
+	size?: number;
+}
+
+// ============================================================================
+// Image Value Types (for form handling)
+// ============================================================================
 
 /**
  * Represents an image that can be either:
@@ -92,89 +113,54 @@ export function revokeImagePreview(value: ImageValue): void {
 }
 
 // ============================================================================
-// WebP Conversion
+// Polling Configuration
+// ============================================================================
+
+const POLL_INTERVAL_MS = 500;
+const MAX_POLL_ATTEMPTS = 60; // 30 seconds max wait
+
+// ============================================================================
+// Upload Status Polling
 // ============================================================================
 
 /**
- * Default WebP quality (0-1)
+ * Poll upload status until completion or failure
+ * @param uploadId - The upload ID to poll
+ * @returns Promise resolving to the final filename
+ * @throws Error if upload fails or times out
  */
-const WEBP_QUALITY = 0.85;
+async function pollUploadStatus(uploadId: string): Promise<string> {
+	let attempts = 0;
 
-/**
- * Convert an image file to WebP using Canvas API
- * @param file - The image file to convert
- * @param quality - WebP quality (0-1), defaults to 0.85
- * @returns Promise resolving to a WebP Blob
- */
-async function convertToWebP(
-	file: File,
-	quality = WEBP_QUALITY,
-): Promise<Blob> {
-	return new Promise((resolve, reject) => {
-		const img = new Image();
-		const url = URL.createObjectURL(file);
+	while (attempts < MAX_POLL_ATTEMPTS) {
+		const response = await api.get<UploadStatusResponse>(
+			`/admin/upload/${uploadId}/status`,
+		);
+		const status = response.data;
 
-		img.onload = () => {
-			URL.revokeObjectURL(url);
+		switch (status.status) {
+			case "completed":
+				if (!status.filename) {
+					throw new Error("Upload completed but no filename returned");
+				}
+				return status.filename;
 
-			// Create canvas with image dimensions
-			const canvas = document.createElement("canvas");
-			canvas.width = img.naturalWidth;
-			canvas.height = img.naturalHeight;
+			case "failed":
+				throw new Error(status.error || "Upload processing failed");
 
-			// Draw image to canvas
-			const ctx = canvas.getContext("2d");
-			if (!ctx) {
-				reject(new Error("Failed to get canvas context"));
-				return;
-			}
-			ctx.drawImage(img, 0, 0);
+			case "pending":
+			case "processing":
+				// Continue polling
+				await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+				attempts++;
+				break;
 
-			// Convert to WebP blob
-			canvas.toBlob(
-				(blob) => {
-					if (blob) {
-						resolve(blob);
-					} else {
-						reject(new Error("Failed to convert image to WebP"));
-					}
-				},
-				"image/webp",
-				quality,
-			);
-		};
-
-		img.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("Failed to load image"));
-		};
-
-		img.src = url;
-	});
-}
-
-/**
- * Convert a File to WebP and create a new File object
- * @param file - The original file
- * @param quality - WebP quality (0-1)
- * @returns Promise resolving to a WebP File
- */
-async function convertFileToWebP(
-	file: File,
-	quality = WEBP_QUALITY,
-): Promise<File> {
-	// If already WebP, return as-is
-	if (file.type === "image/webp") {
-		return file;
+			default:
+				throw new Error(`Unknown upload status: ${status.status}`);
+		}
 	}
 
-	const blob = await convertToWebP(file, quality);
-
-	// Create new filename with .webp extension
-	const originalName = file.name.replace(/\.[^.]+$/, "");
-	const webpName = `${originalName}.webp`;
-
-	return new File([blob], webpName, { type: "image/webp" });
+	throw new Error("Upload timed out waiting for processing");
 }
 
 // ============================================================================
@@ -183,48 +169,63 @@ async function convertFileToWebP(
 
 /**
  * Upload a single image file
- * Converts to WebP client-side before uploading
- * Returns the stored filename (not a signed URL)
+ * Sends original file to backend for WebP conversion
+ * Returns the stored filename after processing completes
  */
 export async function uploadImage(file: File): Promise<string> {
-	// Convert to WebP on client-side
-	const webpFile = await convertFileToWebP(file);
-
 	const formData = new FormData();
-	formData.append("file", webpFile);
+	formData.append("file", file);
 
-	const response = await api.post<UploadResponse>("/admin/upload", formData);
+	const response = await api.post<AsyncUploadResponse>(
+		"/admin/upload",
+		formData,
+	);
 
-	return response.data.filename;
+	const { upload_id, status } = response.data;
+
+	// If already completed (file was already WebP), return immediately
+	if (status === "completed") {
+		return upload_id; // upload_id is the filename for completed uploads
+	}
+
+	// Poll for completion
+	return pollUploadStatus(upload_id);
 }
 
 /**
  * Upload multiple image files
- * Converts all to WebP client-side before uploading
- * Returns the stored filenames
+ * Sends original files to backend for WebP conversion
+ * Returns the stored filenames after all processing completes
  */
 export async function uploadImages(files: File[]): Promise<{
 	filenames: string[];
 	failed: string[];
 }> {
-	// Convert all files to WebP in parallel
-	const webpFiles = await Promise.all(
-		files.map((file) => convertFileToWebP(file)),
-	);
-
 	const formData = new FormData();
-	for (const file of webpFiles) {
+	for (const file of files) {
 		formData.append("files", file);
 	}
 
-	const response = await api.post<BulkUploadResponse>(
+	const response = await api.post<AsyncBulkUploadResponse>(
 		"/admin/upload/bulk",
 		formData,
 	);
 
+	const { uploads, failed = [] } = response.data;
+
+	// Poll all pending uploads in parallel
+	const filenamePromises = uploads.map(async ({ upload_id, status }) => {
+		if (status === "completed") {
+			return upload_id; // Already completed
+		}
+		return pollUploadStatus(upload_id);
+	});
+
+	const filenames = await Promise.all(filenamePromises);
+
 	return {
-		filenames: (response.data.uploads ?? []).map((u) => u.filename),
-		failed: response.data.failed ?? [],
+		filenames,
+		failed,
 	};
 }
 
