@@ -9,16 +9,16 @@ import (
 )
 
 // Maintenance blocks requests when maintenance mode is enabled.
-// Always allows /health checks, /admin routes, and IPs in the allowed list.
+// Always allows /health, /auth, /admin routes, and IPs in the allowed list.
 func Maintenance(settingsService *settings.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/health") {
-				next.ServeHTTP(w, r)
-				return
-			}
+			path := r.URL.Path
 
-			if strings.HasPrefix(r.URL.Path, "/admin") {
+			// Always allow health checks, auth, and admin routes
+			if strings.HasPrefix(path, "/health") ||
+				strings.HasPrefix(path, "/auth") ||
+				strings.HasPrefix(path, "/admin") {
 				next.ServeHTTP(w, r)
 				return
 			}
