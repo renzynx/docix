@@ -1,0 +1,70 @@
+# DevContainer-specific service configuration
+# This file adds the devcontainer service that VS Code connects to
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: docix-devcontainer
+    volumes:
+      # Mount the entire project
+      - ..:/app
+      # Persist Go module cache
+      - go_mod_cache:/go/pkg/mod
+      # Shared uploads volume with other services
+      - uploads_data:/data/uploads
+    environment:
+      # Server environment
+      - HOST=0.0.0.0
+      - PORT=8000
+      - GO_ENV=development
+      - AUTH_SECRET=dev-secret-change-in-production
+      - TRUSTED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - MONGO_URL=mongodb://mongodb:27017/docix
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - UPLOAD_DIR=/data/uploads
+      - PENDING_UPLOAD_DIR=/data/uploads/pending
+      - CDN_BASE_URL=http://localhost:8081
+      - HMAC_SECRET=dev-hmac-secret
+      # Worker environment
+      - WORKER_CONCURRENCY=10
+      - WEBP_QUALITY=85
+      # CDN environment
+      - CDN_PORT=8081
+      - URL_TTL_SECS=86400
+      # Frontend environment
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Keep container running for VS Code to attach
+    command: sleep infinity
+    # Forward all relevant ports
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "8000:8000"
+      - "8081:8081"
+
+  # Disable other Go services - devcontainer runs them all
+  server:
+    profiles:
+      - disabled
+  worker:
+    profiles:
+      - disabled
+  cdn:
+    profiles:
+      - disabled
+  web:
+    profiles:
+      - disabled
+  admin:
+    profiles:
+      - disabled
+
+volumes:
+  go_mod_cache:

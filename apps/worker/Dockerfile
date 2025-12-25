@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install build dependencies for bimg/libvips
 RUN apk add --no-cache git vips-dev gcc musl-dev

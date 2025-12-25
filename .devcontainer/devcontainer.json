@@ -1,0 +1,47 @@
+{
+	"name": "Docix Dev",
+	"dockerComposeFile": [
+		"../docker-compose.yml",
+		"../docker-compose.override.yml",
+		"docker-compose.devcontainer.yml"
+	],
+	"service": "devcontainer",
+	"workspaceFolder": "/app",
+	"shutdownAction": "stopCompose",
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"golang.go",
+				"ms-vscode.vscode-typescript-next",
+				"bradlc.vscode-tailwindcss",
+				"esbenp.prettier-vscode",
+				"biomejs.biome",
+				"dbaeumer.vscode-eslint",
+				"formulahendry.auto-rename-tag",
+				"ms-azuretools.vscode-docker"
+			],
+			"settings": {
+				"go.toolsManagement.autoUpdate": true,
+				"go.useLanguageServer": true,
+				"editor.formatOnSave": true,
+				"editor.defaultFormatter": "biomejs.biome",
+				"[go]": {
+					"editor.defaultFormatter": "golang.go"
+				},
+				"[typescript]": {
+					"editor.defaultFormatter": "biomejs.biome"
+				},
+				"[typescriptreact]": {
+					"editor.defaultFormatter": "biomejs.biome"
+				}
+			}
+		}
+	},
+	"forwardPorts": [3000, 3001, 8000, 8081, 27017, 6379],
+	"postCreateCommand": "pnpm install",
+	"remoteUser": "root"
+}
