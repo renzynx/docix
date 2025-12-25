@@ -393,6 +393,89 @@ export interface SystemInfo {
 }
 
 //////////
+// source: tasks.go
+
+export type TaskState = string;
+export const TaskStatePending: TaskState = "pending";
+export const TaskStateActive: TaskState = "active";
+export const TaskStateScheduled: TaskState = "scheduled";
+export const TaskStateRetry: TaskState = "retry";
+export const TaskStateArchived: TaskState = "archived";
+export const TaskStateCompleted: TaskState = "completed";
+export interface QueueInfo {
+  name: string;
+  paused: boolean;
+  pending: number /* int */;
+  active: number /* int */;
+  scheduled: number /* int */;
+  retry: number /* int */;
+  archived: number /* int */;
+  completed: number /* int */;
+  processed: number /* int */;
+  failed: number /* int */;
+  memory_usage: number /* int64 */;
+  latency: number;
+}
+export interface TaskInfo {
+  id: string;
+  queue: string;
+  type: string;
+  payload: string;
+  state: TaskState;
+  max_retry: number /* int */;
+  retried: number /* int */;
+  last_error?: string;
+  next_process_at?: string;
+  timeout: number /* int64 */;
+  deadline?: string;
+  completed_at?: string;
+  result?: string;
+}
+export interface TaskListRequest {
+  queue: string;
+  state: TaskState;
+  page: number /* int */;
+  page_size: number /* int */;
+}
+export interface TaskListResponse {
+  tasks: TaskInfo[];
+  total_count: number /* int */;
+  page: number /* int */;
+  page_size: number /* int */;
+}
+export interface QueueListResponse {
+  queues: QueueInfo[];
+}
+export interface TaskActionRequest {
+  queue: string;
+  task_id: string;
+}
+export interface DailyStats {
+  date: string;
+  processed: number /* int */;
+  failed: number /* int */;
+}
+export interface ServerInfo {
+  host: string;
+  pid: number /* int */;
+  concurrency: number /* int */;
+  queues: { [key: string]: number /* int */};
+  started: string;
+  status: string;
+  active_workers: WorkerInfo[];
+}
+export interface WorkerInfo {
+  task_id: string;
+  queue: string;
+  task_type: string;
+  started_at: string;
+}
+export interface TaskStatsResponse {
+  queues: QueueInfo[];
+  servers: ServerInfo[];
+}
+
+//////////
 // source: user.go
 
 export interface User {

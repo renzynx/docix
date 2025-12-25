@@ -17,6 +17,7 @@ import {
 	Analytics01Icon,
 	ArrowLeft01Icon,
 	BookOpen01Icon,
+	QueueIcon,
 	Settings01Icon,
 	Tag01Icon,
 	UserGroupIcon,
@@ -53,6 +54,11 @@ const navItems = [
 		label: "Tags",
 		href: "/tags",
 		icon: Tag01Icon,
+	},
+	{
+		label: "Tasks",
+		href: "/tasks",
+		icon: QueueIcon,
 	},
 	{
 		label: "Settings",

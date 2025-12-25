@@ -13,6 +13,7 @@ import (
 	"github.com/renzynx/docix/server/internal/middleware"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/settings"
+	"github.com/renzynx/docix/server/internal/tasks"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,7 +42,12 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	mangaPublicHandler := handler.NewMangaPublicHandler(db, signer, settingsService)
 	uploadHandler := handler.NewUploadHandler(db, cfg, settingsService)
 	bookmarkHandler := handler.NewBookmarkHandler(db)
-	taskHandler := handler.NewTaskHandler(logrus.New())
+
+	inspector, err := tasks.GetInspector()
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to initialize task inspector")
+	}
+	taskHandler := handler.NewTaskHandler(inspector, logger)
 
 	r.Route("/health", func(router chi.Router) {
 		router.Get("/", handler.GetHealth)
@@ -99,7 +105,29 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		router.Get("/permissions", adminHandler.GetPermissions)
 		router.Get("/stats", adminHandler.GetDashboardStats)
 
-		router.Get("/tasks", taskHandler.GetTaskStats)
+		router.Route("/tasks", func(r chi.Router) {
+			r.Get("/", taskHandler.GetStats)
+			r.Get("/servers", taskHandler.ListServers)
+
+			r.Route("/queues", func(r chi.Router) {
+				r.Get("/", taskHandler.ListQueues)
+				r.Get("/{name}", taskHandler.GetQueueInfo)
+				r.Get("/{name}/tasks", taskHandler.ListTasks)
+				r.Get("/{name}/history", taskHandler.GetHistory)
+				r.Post("/{name}/pause", taskHandler.PauseQueue)
+				r.Post("/{name}/unpause", taskHandler.UnpauseQueue)
+				r.Post("/{name}/run-scheduled", taskHandler.RunAllScheduledTasks)
+				r.Post("/{name}/run-retry", taskHandler.RunAllRetryTasks)
+				r.Delete("/{name}/archived", taskHandler.DeleteAllArchivedTasks)
+			})
+
+			r.Route("/{queue}/{id}", func(r chi.Router) {
+				r.Get("/", taskHandler.GetTask)
+				r.Post("/run", taskHandler.RunTask)
+				r.Post("/archive", taskHandler.ArchiveTask)
+				r.Delete("/", taskHandler.DeleteTask)
+			})
+		})
 
 		router.Route("/upload", func(r chi.Router) {
 			r.Post("/", uploadHandler.UploadFile)
