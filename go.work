@@ -2,6 +2,7 @@ go 1.25.5
 
 use (
 	./apps/cdn
+	./apps/cli
 	./apps/server
 	./apps/worker
 	./packages/go

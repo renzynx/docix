@@ -1,26 +1,35 @@
-# Combined development environment for Docix
-# Go + Node + pnpm + libvips for image processing
-FROM golang:1.25.5-alpine
+FROM golang:1.25.5-bookworm
 
 # Install system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     bash \
-    vips-dev \
-    gcc \
-    musl-dev \
-    nodejs \
-    npm
+    libvips-dev \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install air for Go hot-reload
 RUN go install github.com/air-verse/air@latest
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Set up nvm environment
+ENV NVM_DIR=/root/.nvm
 
-# Enable corepack for pnpm management
-RUN corepack enable
+# Copy .nvmrc first for nvm install
+COPY .nvmrc /tmp/.nvmrc
+
+# Install nvm and Node.js based on .nvmrc
+# Create symlinks to make node/npm/pnpm available in PATH without sourcing nvm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \
+    . "$NVM_DIR/nvm.sh" && \
+    cd /tmp && nvm install && \
+    npm install -g pnpm && \
+    NODE_PATH=$(dirname $(which node)) && \
+    ln -sf "$NODE_PATH/node" /usr/local/bin/node && \
+    ln -sf "$NODE_PATH/npm" /usr/local/bin/npm && \
+    ln -sf "$NODE_PATH/npx" /usr/local/bin/npx && \
+    ln -sf "$NODE_PATH/pnpm" /usr/local/bin/pnpm && \
+    ln -sf "$NODE_PATH/pnpx" /usr/local/bin/pnpx
 
 WORKDIR /app
 
@@ -32,13 +41,15 @@ COPY go.work.sum* ./
 COPY apps/server/go.* ./apps/server/
 COPY apps/worker/go.* ./apps/worker/
 COPY apps/cdn/go.* ./apps/cdn/
+COPY apps/cli/go.* ./apps/cli/
 COPY packages/go/go.* ./packages/go/
 COPY packages/go/redis/go.* ./packages/go/redis/
 
 # Download Go dependencies
 RUN cd apps/server && go mod download && \
     cd ../worker && go mod download && \
-    cd ../cdn && go mod download
+    cd ../cdn && go mod download && \
+    cd ../cli && go mod download
 
 # Copy package.json files for pnpm dependency caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
