@@ -1,10 +1,6 @@
 "use client";
 
-import {
-	adminCleanOrphanedFiles,
-	adminUpdateSiteSettings,
-	queryKeys,
-} from "@docix/api";
+import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 import type { ContentConfig } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import {
@@ -40,160 +36,120 @@ export function ContentSettings({ settings }: ContentSettingsProps) {
 		},
 	});
 
-	const cleanupMutation = useMutation({
-		mutationFn: () => adminCleanOrphanedFiles(),
-		onSuccess: (data) => {
-			toast.success(data.message || "Cleanup task enqueued");
-		},
-		onError: () => {
-			toast.error("Failed to start cleanup task");
-		},
-	});
-
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		mutation.mutate();
 	};
 
 	return (
-		<div className="space-y-6">
-			<Card>
-				<CardHeader>
-					<CardTitle>Content Settings</CardTitle>
-					<CardDescription>
-						Configure upload limits, content rules, and moderation settings.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form onSubmit={handleSubmit} className="space-y-6">
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="space-y-2">
-								<Label htmlFor="maxUpload">Max Upload Size (MB)</Label>
-								<Input
-									id="maxUpload"
-									type="number"
-									min={1}
-									value={form.max_upload_size_mb}
-									onChange={(e) =>
-										setForm({
-											...form,
-											max_upload_size_mb:
-												Number.parseInt(e.target.value, 10) || 1,
-										})
-									}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="maxChapters">Max Chapters Per Day</Label>
-								<Input
-									id="maxChapters"
-									type="number"
-									min={1}
-									value={form.max_chapters_per_day}
-									onChange={(e) =>
-										setForm({
-											...form,
-											max_chapters_per_day:
-												Number.parseInt(e.target.value, 10) || 1,
-										})
-									}
-								/>
-							</div>
+		<Card>
+			<CardHeader>
+				<CardTitle>Content Settings</CardTitle>
+				<CardDescription>
+					Configure upload limits, content rules, and moderation settings.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<form onSubmit={handleSubmit} className="space-y-6">
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="maxUpload">Max Upload Size (MB)</Label>
+							<Input
+								id="maxUpload"
+								type="number"
+								min={1}
+								value={form.max_upload_size_mb}
+								onChange={(e) =>
+									setForm({
+										...form,
+										max_upload_size_mb:
+											Number.parseInt(e.target.value, 10) || 1,
+									})
+								}
+							/>
 						</div>
-
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="space-y-2">
-								<Label htmlFor="imageTypes">Allowed Image Types</Label>
-								<Input
-									id="imageTypes"
-									value={form.allowed_image_types}
-									onChange={(e) =>
-										setForm({ ...form, allowed_image_types: e.target.value })
-									}
-									placeholder="jpg,jpeg,png,webp,gif"
-								/>
-								<p className="text-xs text-muted-foreground">
-									Comma-separated list of extensions
-								</p>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="rating">Default Content Rating</Label>
-								<Input
-									id="rating"
-									value={form.default_content_rating}
-									onChange={(e) =>
-										setForm({ ...form, default_content_rating: e.target.value })
-									}
-								/>
-							</div>
+						<div className="space-y-2">
+							<Label htmlFor="maxChapters">Max Chapters Per Day</Label>
+							<Input
+								id="maxChapters"
+								type="number"
+								min={1}
+								value={form.max_chapters_per_day}
+								onChange={(e) =>
+									setForm({
+										...form,
+										max_chapters_per_day:
+											Number.parseInt(e.target.value, 10) || 1,
+									})
+								}
+							/>
 						</div>
+					</div>
 
-						<div className="space-y-4">
-							<div className="flex items-center justify-between">
-								<div className="space-y-0.5">
-									<Label>Enable Comments</Label>
-									<p className="text-sm text-muted-foreground">
-										Allow users to comment on series and chapters
-									</p>
-								</div>
-								<Switch
-									checked={form.enable_comments}
-									onCheckedChange={(checked) =>
-										setForm({ ...form, enable_comments: checked })
-									}
-								/>
-							</div>
-
-							<div className="flex items-center justify-between">
-								<div className="space-y-0.5">
-									<Label>Require Moderation</Label>
-									<p className="text-sm text-muted-foreground">
-										New content requires approval before publishing
-									</p>
-								</div>
-								<Switch
-									checked={form.require_moderation}
-									onCheckedChange={(checked) =>
-										setForm({ ...form, require_moderation: checked })
-									}
-								/>
-							</div>
-						</div>
-
-						<Button type="submit" disabled={mutation.isPending}>
-							{mutation.isPending ? "Saving..." : "Save Changes"}
-						</Button>
-					</form>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle>Storage Maintenance</CardTitle>
-					<CardDescription>
-						Clean up orphaned files and manage storage space.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div className="space-y-0.5">
-							<Label>Clean Orphaned Files</Label>
-							<p className="text-sm text-muted-foreground">
-								Remove uploaded files that are no longer referenced by any
-								series or chapter. Also cleans up stale pending files from
-								failed uploads.
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="imageTypes">Allowed Image Types</Label>
+							<Input
+								id="imageTypes"
+								value={form.allowed_image_types}
+								onChange={(e) =>
+									setForm({ ...form, allowed_image_types: e.target.value })
+								}
+								placeholder="jpg,jpeg,png,webp,gif"
+							/>
+							<p className="text-xs text-muted-foreground">
+								Comma-separated list of extensions
 							</p>
 						</div>
-						<Button
-							variant="outline"
-							onClick={() => cleanupMutation.mutate()}
-							disabled={cleanupMutation.isPending}
-						>
-							{cleanupMutation.isPending ? "Starting..." : "Run Cleanup"}
-						</Button>
+						<div className="space-y-2">
+							<Label htmlFor="rating">Default Content Rating</Label>
+							<Input
+								id="rating"
+								value={form.default_content_rating}
+								onChange={(e) =>
+									setForm({ ...form, default_content_rating: e.target.value })
+								}
+							/>
+						</div>
 					</div>
-				</CardContent>
-			</Card>
-		</div>
+
+					<div className="space-y-4">
+						<div className="flex items-center justify-between">
+							<div className="space-y-0.5">
+								<Label>Enable Comments</Label>
+								<p className="text-sm text-muted-foreground">
+									Allow users to comment on series and chapters
+								</p>
+							</div>
+							<Switch
+								checked={form.enable_comments}
+								onCheckedChange={(checked) =>
+									setForm({ ...form, enable_comments: checked })
+								}
+							/>
+						</div>
+
+						<div className="flex items-center justify-between">
+							<div className="space-y-0.5">
+								<Label>Require Moderation</Label>
+								<p className="text-sm text-muted-foreground">
+									New content requires approval before publishing
+								</p>
+							</div>
+							<Switch
+								checked={form.require_moderation}
+								onCheckedChange={(checked) =>
+									setForm({ ...form, require_moderation: checked })
+								}
+							/>
+						</div>
+					</div>
+
+					<Button type="submit" disabled={mutation.isPending}>
+						{mutation.isPending ? "Saving..." : "Save Changes"}
+					</Button>
+				</form>
+			</CardContent>
+		</Card>
 	);
 }

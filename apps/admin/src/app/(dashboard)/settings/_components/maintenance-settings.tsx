@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	adminCleanOrphanedFiles,
 	adminPerformMaintenanceAction,
 	adminUpdateSiteSettings,
 	queryKeys,
@@ -52,6 +53,16 @@ export function MaintenanceSettings({ settings }: MaintenanceSettingsProps) {
 		},
 		onError: () => {
 			toast.error("Action failed");
+		},
+	});
+
+	const cleanupMutation = useMutation({
+		mutationFn: () => adminCleanOrphanedFiles(),
+		onSuccess: (data) => {
+			toast.success(data.message || "Cleanup task enqueued");
+		},
+		onError: () => {
+			toast.error("Failed to start cleanup task");
 		},
 	});
 
@@ -142,6 +153,16 @@ export function MaintenanceSettings({ settings }: MaintenanceSettingsProps) {
 							disabled={actionMutation.isPending}
 						>
 							Test Email
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => cleanupMutation.mutate()}
+							disabled={cleanupMutation.isPending}
+						>
+							{cleanupMutation.isPending
+								? "Starting..."
+								: "Clean Orphaned Files"}
 						</Button>
 					</div>
 				</div>
