@@ -63,3 +63,5 @@ data/
 
 # Beads
 .beads/bd.sock*
+*/main
+*/api
