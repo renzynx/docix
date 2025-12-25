@@ -7,8 +7,16 @@ services:
     volumes:
       # Mount the entire project 
       - ${LOCAL_WORKSPACE_FOLDER:-.}:/app
+      # Exclude host node_modules - use container's own
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/admin/node_modules
+      - /app/packages/ui/node_modules
+      - /app/packages/types/node_modules
       # Persist Go module cache
       - go_mod_cache:/go/pkg/mod
+      # Persist pnpm store for faster installs
+      - pnpm_store:/root/.local/share/pnpm/store
       # Shared uploads volume with other services
       - uploads_data:/data/uploads
     environment:
@@ -65,3 +73,4 @@ services:
 
 volumes:
   go_mod_cache:
+  pnpm_store:
