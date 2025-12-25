@@ -16,6 +16,9 @@ const (
 
 	// TypeCleanupOrphans removes files not referenced in database
 	TypeCleanupOrphans = "cleanup:orphans"
+
+	// TypeViewSync syncs view counts from Redis to MongoDB
+	TypeViewSync = "views:sync"
 )
 
 // Queue names

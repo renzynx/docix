@@ -75,6 +75,7 @@ func main() {
 
 	imageHandler := handlers.NewImageHandler(imgProcessor, redisClient, logger)
 	cleanupHandler := handlers.NewCleanupHandler(db, cfg, redisClient, logger)
+	viewSyncHandler := handlers.NewViewSyncHandler(db, redisClient, logger)
 
 	redisOpt := asynq.RedisClientOpt{
 		Addr:     cfg.RedisAddr,
@@ -104,19 +105,46 @@ func main() {
 	mux.Handle(tasks.TypeImageConvert, imageHandler)
 	mux.Handle(tasks.TypeImageThumbnail, imageHandler)
 	mux.Handle(tasks.TypeCleanupOrphans, cleanupHandler)
+	mux.Handle(tasks.TypeViewSync, viewSyncHandler)
 
+	// Scheduler for periodic tasks (view sync every 5 minutes)
+	scheduler := asynq.NewScheduler(redisOpt, &asynq.SchedulerOpts{
+		Location: time.UTC,
+		Logger:   &asynqLogAdapter{logger: logger},
+		LogLevel: asynq.InfoLevel,
+	})
+
+	viewSyncTask := asynq.NewTask(tasks.TypeViewSync, nil)
+	if _, err := scheduler.Register("@every 5m", viewSyncTask, asynq.Queue(tasks.QueueDefault)); err != nil {
+		log.WithError(err).Fatal("Failed to register view sync task")
+	}
+	log.Info("Registered periodic view sync task (every 5 minutes)")
+
+	// Handle shutdown signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Run scheduler in background
 	go func() {
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		sig := <-sigChan
-		log.WithField("signal", sig).Info("Received shutdown signal, stopping server...")
-		srv.Shutdown()
+		if err := scheduler.Run(); err != nil {
+			log.WithError(err).Error("Scheduler error")
+		}
 	}()
 
-	log.Info("Worker is ready to process tasks")
-	if err := srv.Run(mux); err != nil {
-		log.WithError(err).Fatal("Failed to run server")
-	}
+	// Run server in background
+	go func() {
+		log.Info("Worker is ready to process tasks")
+		if err := srv.Run(mux); err != nil {
+			log.WithError(err).Error("Server error")
+		}
+	}()
+
+	// Wait for shutdown signal
+	sig := <-sigChan
+	log.WithField("signal", sig).Info("Received shutdown signal, stopping...")
+
+	scheduler.Shutdown()
+	srv.Shutdown()
 
 	log.Info("Worker shutdown complete")
 }

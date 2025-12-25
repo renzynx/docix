@@ -47,6 +47,10 @@ func (c *Client) Series() *mongo.Collection {
 	return c.Database("docix").Collection("series")
 }
 
+func (c *Client) Chapters() *mongo.Collection {
+	return c.Database("docix").Collection("chapters")
+}
+
 func (c *Client) Pages() *mongo.Collection {
 	return c.Database("docix").Collection("pages")
 }

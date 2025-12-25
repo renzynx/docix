@@ -4,76 +4,41 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
-	"sync"
-	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/renzynx/docix/packages/go/redis"
 	"github.com/renzynx/docix/server/internal/auth"
 	"github.com/renzynx/docix/server/internal/database"
+	"github.com/renzynx/docix/server/internal/middleware"
 	"github.com/renzynx/docix/server/internal/response"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type MangaHandler struct {
-	DB        *database.Database
-	viewCache *viewRateLimiter
+	DB          *database.Database
+	ViewTracker *redis.ViewTracker
 }
 
 func NewMangaHandler(db *database.Database) *MangaHandler {
 	return &MangaHandler{
-		DB:        db,
-		viewCache: newViewRateLimiter(1 * time.Hour),
+		DB:          db,
+		ViewTracker: redis.NewViewTracker(redis.MustGetClient()),
 	}
 }
 
-// Prevents duplicate view counts from same IP within the rate limit window
-type viewRateLimiter struct {
-	mu       sync.RWMutex
-	views    map[string]time.Time
-	duration time.Duration
-}
-
-func newViewRateLimiter(duration time.Duration) *viewRateLimiter {
-	rl := &viewRateLimiter{
-		views:    make(map[string]time.Time),
-		duration: duration,
+// getViewIdentifier returns a unique identifier for view deduplication.
+// Uses session ID if available (handles both logged-in users and guests),
+// falls back to IP hash for unauthenticated requests.
+func getViewIdentifier(r *http.Request) string {
+	if sess := middleware.GetSessionFromContext(r.Context()); sess != nil {
+		return hashIdentifier(sess.ID)
 	}
-	go rl.cleanup()
-	return rl
+	return hashIdentifier(auth.GetClientIP(r))
 }
 
-func (rl *viewRateLimiter) cleanup() {
-	ticker := time.NewTicker(10 * time.Minute)
-	for range ticker.C {
-		rl.mu.Lock()
-		now := time.Now()
-		for key, expiry := range rl.views {
-			if now.After(expiry) {
-				delete(rl.views, key)
-			}
-		}
-		rl.mu.Unlock()
-	}
-}
-
-func (rl *viewRateLimiter) canView(resourceType, resourceID, ipHash string) bool {
-	key := resourceType + ":" + resourceID + ":" + ipHash
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	if expiry, exists := rl.views[key]; exists {
-		if time.Now().Before(expiry) {
-			return false
-		}
-	}
-
-	rl.views[key] = time.Now().Add(rl.duration)
-	return true
-}
-
-func hashIP(ip string) string {
-	hash := sha256.Sum256([]byte(ip))
+func hashIdentifier(input string) string {
+	hash := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(hash[:8])
 }
 
@@ -84,33 +49,24 @@ func (h *MangaHandler) IncrementSeriesView(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	objectID, err := bson.ObjectIDFromHex(seriesID)
-	if err != nil {
+	if _, err := bson.ObjectIDFromHex(seriesID); err != nil {
 		response.Error(w, http.StatusBadRequest, "Invalid series ID")
 		return
 	}
 
-	clientIP := auth.GetClientIP(r)
-	ipHash := hashIP(clientIP)
+	identifier := getViewIdentifier(r)
 
-	if !h.viewCache.canView("series", seriesID, ipHash) {
-		response.JSON(w, http.StatusOK, map[string]string{
-			"message": "View already recorded",
-		})
-		return
-	}
-
-	result, err := h.DB.Series.UpdateOne(r.Context(), bson.M{"_id": objectID}, bson.M{
-		"$inc": bson.M{"view_count": 1},
-	})
+	isNew, err := h.ViewTracker.RecordView(r.Context(), "series", seriesID, identifier)
 	if err != nil {
-		log.Error("Failed to increment series view: ", err)
+		log.WithError(err).Error("Failed to record series view")
 		response.Error(w, http.StatusInternalServerError, "Failed to record view")
 		return
 	}
 
-	if result.MatchedCount == 0 {
-		response.Error(w, http.StatusNotFound, "Series not found")
+	if !isNew {
+		response.JSON(w, http.StatusOK, map[string]string{
+			"message": "View already recorded",
+		})
 		return
 	}
 
@@ -132,39 +88,35 @@ func (h *MangaHandler) IncrementChapterView(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	clientIP := auth.GetClientIP(r)
-	ipHash := hashIP(clientIP)
+	// Verify chapter exists and get series ID for the series view
+	var chapter struct {
+		SeriesID bson.ObjectID `bson:"series_id"`
+	}
+	if err := h.DB.Chapters.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&chapter); err != nil {
+		response.Error(w, http.StatusNotFound, "Chapter not found")
+		return
+	}
 
-	if !h.viewCache.canView("chapter", chapterID, ipHash) {
+	identifier := getViewIdentifier(r)
+
+	// Record chapter view
+	isNew, err := h.ViewTracker.RecordView(r.Context(), "chapter", chapterID, identifier)
+	if err != nil {
+		log.WithError(err).Error("Failed to record chapter view")
+		response.Error(w, http.StatusInternalServerError, "Failed to record view")
+		return
+	}
+
+	if !isNew {
 		response.JSON(w, http.StatusOK, map[string]string{
 			"message": "View already recorded",
 		})
 		return
 	}
 
-	var chapter struct {
-		SeriesID bson.ObjectID `bson:"series_id"`
-	}
-	err = h.DB.Chapters.FindOne(r.Context(), bson.M{"_id": objectID}).Decode(&chapter)
-	if err != nil {
-		response.Error(w, http.StatusNotFound, "Chapter not found")
-		return
-	}
-
-	_, err = h.DB.Chapters.UpdateOne(r.Context(), bson.M{"_id": objectID}, bson.M{
-		"$inc": bson.M{"view_count": 1},
-	})
-	if err != nil {
-		log.Error("Failed to increment chapter view: ", err)
-		response.Error(w, http.StatusInternalServerError, "Failed to record view")
-		return
-	}
-
-	_, err = h.DB.Series.UpdateOne(r.Context(), bson.M{"_id": chapter.SeriesID}, bson.M{
-		"$inc": bson.M{"view_count": 1},
-	})
-	if err != nil {
-		log.Error("Failed to increment series view from chapter: ", err)
+	// Also record a series view (reading a chapter counts as viewing the series)
+	if _, err := h.ViewTracker.RecordView(r.Context(), "series", chapter.SeriesID.Hex(), identifier); err != nil {
+		log.WithError(err).Warn("Failed to record series view from chapter")
 	}
 
 	response.JSON(w, http.StatusOK, map[string]string{
