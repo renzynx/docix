@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strconv"
@@ -16,18 +17,29 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+// CDNSettingsProvider defines the interface for CDN settings access
+type CDNSettingsProvider interface {
+	IsCDNEnabled(ctx context.Context) bool
+	GetCDNBaseURL(ctx context.Context) string
+}
+
 type MangaPublicHandler struct {
-	DB     *database.Database
-	Signer *signing.Signer
+	DB       *database.Database
+	Signer   *signing.Signer
+	Settings CDNSettingsProvider
 }
 
-func NewMangaPublicHandler(db *database.Database, signer *signing.Signer) *MangaPublicHandler {
-	return &MangaPublicHandler{DB: db, Signer: signer}
+func NewMangaPublicHandler(db *database.Database, signer *signing.Signer, settings CDNSettingsProvider) *MangaPublicHandler {
+	return &MangaPublicHandler{DB: db, Signer: signer, Settings: settings}
 }
 
-func (h *MangaPublicHandler) signImageURL(filename string) string {
+func (h *MangaPublicHandler) signImageURL(ctx context.Context, filename string) string {
 	if filename == "" {
 		return ""
+	}
+	// Check if CDN is enabled in settings
+	if h.Settings != nil && !h.Settings.IsCDNEnabled(ctx) {
+		return filename // Return raw filename if CDN disabled
 	}
 	return h.Signer.GenerateSignedURL(filename)
 }
@@ -119,7 +131,7 @@ func (h *MangaPublicHandler) ListSeries(w http.ResponseWriter, r *http.Request) 
 	}
 
 	for i := range seriesList {
-		seriesList[i].CoverImageURL = h.signImageURL(seriesList[i].CoverImage)
+		seriesList[i].CoverImageURL = h.signImageURL(r.Context(), seriesList[i].CoverImage)
 		if len(seriesList[i].TagIDs) > 0 {
 			tagCursor, err := h.DB.Tags.Find(r.Context(), bson.M{"_id": bson.M{"$in": seriesList[i].TagIDs}})
 			if err == nil {
@@ -167,7 +179,7 @@ func (h *MangaPublicHandler) GetSeriesBySlug(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	series.CoverImageURL = h.signImageURL(series.CoverImage)
+	series.CoverImageURL = h.signImageURL(r.Context(), series.CoverImage)
 
 	if len(series.TagIDs) > 0 {
 		tagCursor, err := h.DB.Tags.Find(r.Context(), bson.M{"_id": bson.M{"$in": series.TagIDs}})
@@ -271,7 +283,7 @@ func (h *MangaPublicHandler) GetChapter(w http.ResponseWriter, r *http.Request) 
 	}
 
 	for i := range pages {
-		pages[i].ImageURLSigned = h.signImageURL(pages[i].ImageURL)
+		pages[i].ImageURLSigned = h.signImageURL(r.Context(), pages[i].ImageURL)
 	}
 
 	if pages == nil {

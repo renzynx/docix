@@ -28,12 +28,12 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		time.Duration(cfg.CDN.URLTTLSecs)*time.Second,
 	)
 
-	authHandler := handler.NewAuthHandler(db, rbacService)
+	authHandler := handler.NewAuthHandler(db, rbacService, settingsService)
 	adminHandler := handler.NewAdminHandler(db, rbacService, settingsService)
 	mangaHandler := handler.NewMangaHandler(db)
-	mangaAdminHandler := handler.NewMangaAdminHandler(db, signer)
-	mangaPublicHandler := handler.NewMangaPublicHandler(db, signer)
-	uploadHandler := handler.NewUploadHandler(db, cfg)
+	mangaAdminHandler := handler.NewMangaAdminHandler(db, signer, settingsService)
+	mangaPublicHandler := handler.NewMangaPublicHandler(db, signer, settingsService)
+	uploadHandler := handler.NewUploadHandler(db, cfg, settingsService)
 	bookmarkHandler := handler.NewBookmarkHandler(db)
 
 	r.Route("/health", func(router chi.Router) {

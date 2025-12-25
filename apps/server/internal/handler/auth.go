@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -21,20 +22,35 @@ import (
 )
 
 type AuthHandler struct {
-	DB    *database.Database
-	RBAC  *rbac.Service
-	Redis *goredis.Client
+	DB       *database.Database
+	RBAC     *rbac.Service
+	Redis    *goredis.Client
+	Settings SettingsProvider
 }
 
-func NewAuthHandler(db *database.Database, rbacService *rbac.Service) *AuthHandler {
+// SettingsProvider defines the interface for settings access
+// This avoids import cycles with the settings package
+type SettingsProvider interface {
+	IsRegistrationOpen(ctx context.Context) bool
+	RequiresEmailVerification(ctx context.Context) bool
+}
+
+func NewAuthHandler(db *database.Database, rbacService *rbac.Service, settings SettingsProvider) *AuthHandler {
 	return &AuthHandler{
-		DB:    db,
-		RBAC:  rbacService,
-		Redis: redis.MustGetClient(),
+		DB:       db,
+		RBAC:     rbacService,
+		Redis:    redis.MustGetClient(),
+		Settings: settings,
 	}
 }
 
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
+	// Check if registration is open
+	if !h.Settings.IsRegistrationOpen(r.Context()) {
+		response.Error(w, http.StatusForbidden, "Registration is currently closed")
+		return
+	}
+
 	req, ok := validator.HandleRequest[models.SignUpRequest](w, r)
 	if !ok {
 		return
@@ -97,6 +113,18 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
+		return
+	}
+
+	// Check if email verification is required and user is not verified
+	if h.Settings.RequiresEmailVerification(r.Context()) && user.VerifiedAt == nil {
+		response.Error(w, http.StatusForbidden, "Please verify your email before signing in")
+		return
+	}
+
+	// Check if user is banned
+	if user.IsBanned {
+		response.Error(w, http.StatusForbidden, "Your account has been suspended")
 		return
 	}
 

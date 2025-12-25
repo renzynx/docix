@@ -249,6 +249,36 @@ func (s *Service) GetMaxUploadSizeMB(ctx context.Context) int {
 	return settings.Content.MaxUploadSizeMB
 }
 
+// GetAllowedImageTypes returns comma-separated list of allowed image types
+func (s *Service) GetAllowedImageTypes(ctx context.Context) string {
+	settings, err := s.Get(ctx)
+	if err != nil {
+		log.Warnf("Failed to get settings for allowed image types: %v", err)
+		return "jpg,jpeg,png,webp,gif" // Default allowed types
+	}
+	return settings.Content.AllowedImageTypes
+}
+
+// IsCDNEnabled checks if CDN is enabled for serving images
+func (s *Service) IsCDNEnabled(ctx context.Context) bool {
+	settings, err := s.Get(ctx)
+	if err != nil {
+		log.Warnf("Failed to get settings for CDN check: %v", err)
+		return true // Default to enabled if settings unavailable
+	}
+	return settings.Integrations.CDNEnabled
+}
+
+// GetCDNBaseURL returns the CDN base URL for serving images
+func (s *Service) GetCDNBaseURL(ctx context.Context) string {
+	settings, err := s.Get(ctx)
+	if err != nil {
+		log.Warnf("Failed to get settings for CDN base URL: %v", err)
+		return "" // No default - fall back to config
+	}
+	return settings.Integrations.CDNBaseURL
+}
+
 // getOrCreateFromDB retrieves settings from MongoDB or creates defaults
 func (s *Service) getOrCreateFromDB(ctx context.Context) (*models.SiteSettings, error) {
 	var settings models.SiteSettings

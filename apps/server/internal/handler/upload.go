@@ -21,12 +21,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type UploadHandler struct {
-	db     *database.Database
-	config *config.Config
+// ContentSettingsProvider defines the interface for content settings access
+type ContentSettingsProvider interface {
+	GetMaxUploadSizeMB(ctx context.Context) int
+	GetAllowedImageTypes(ctx context.Context) string
 }
 
-func NewUploadHandler(db *database.Database, cfg *config.Config) *UploadHandler {
+type UploadHandler struct {
+	db       *database.Database
+	config   *config.Config
+	settings ContentSettingsProvider
+}
+
+func NewUploadHandler(db *database.Database, cfg *config.Config, settings ContentSettingsProvider) *UploadHandler {
 	if err := os.MkdirAll(cfg.Upload.Directory, 0755); err != nil {
 		panic(fmt.Sprintf("failed to create upload directory: %v", err))
 	}
@@ -35,9 +42,60 @@ func NewUploadHandler(db *database.Database, cfg *config.Config) *UploadHandler 
 	}
 
 	return &UploadHandler{
-		db:     db,
-		config: cfg,
+		db:       db,
+		config:   cfg,
+		settings: settings,
 	}
+}
+
+// getMaxFileSize returns the max file size in bytes from settings (with config fallback)
+func (h *UploadHandler) getMaxFileSize(ctx context.Context) int64 {
+	if h.settings != nil {
+		sizeMB := h.settings.GetMaxUploadSizeMB(ctx)
+		if sizeMB > 0 {
+			return int64(sizeMB) * 1024 * 1024
+		}
+	}
+	return h.config.Upload.MaxFileSize
+}
+
+// isAllowedFormat checks if the detected format is in the allowed list from settings
+func (h *UploadHandler) isAllowedFormat(ctx context.Context, format string) bool {
+	if h.settings == nil {
+		// If no settings, allow all detected formats
+		return format != ""
+	}
+
+	allowedTypes := h.settings.GetAllowedImageTypes(ctx)
+	if allowedTypes == "" {
+		return format != ""
+	}
+
+	// Normalize format names for comparison
+	formatAliases := map[string][]string{
+		"jpeg": {"jpg", "jpeg"},
+		"png":  {"png"},
+		"gif":  {"gif"},
+		"webp": {"webp"},
+		"bmp":  {"bmp"},
+		"tiff": {"tiff", "tif"},
+	}
+
+	allowed := strings.Split(strings.ToLower(allowedTypes), ",")
+	for _, a := range allowed {
+		a = strings.TrimSpace(a)
+		if aliases, ok := formatAliases[format]; ok {
+			for _, alias := range aliases {
+				if a == alias {
+					return true
+				}
+			}
+		}
+		if a == format {
+			return true
+		}
+	}
+	return false
 }
 
 func detectImageFormat(header []byte) string {
@@ -92,9 +150,10 @@ func getExtension(format string) string {
 }
 
 func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, h.config.Upload.MaxFileSize)
+	maxSize := h.getMaxFileSize(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
 
-	if err := r.ParseMultipartForm(h.config.Upload.MaxFileSize); err != nil {
+	if err := r.ParseMultipartForm(maxSize); err != nil {
 		response.Error(w, http.StatusBadRequest, "File too large or invalid form data")
 		return
 	}
@@ -115,6 +174,12 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	format := detectImageFormat(header)
 	if format == "" {
 		response.Error(w, http.StatusBadRequest, "Unsupported image format")
+		return
+	}
+
+	// Check if format is allowed by settings
+	if !h.isAllowedFormat(r.Context(), format) {
+		response.Error(w, http.StatusBadRequest, fmt.Sprintf("Image format '%s' is not allowed", format))
 		return
 	}
 
@@ -195,7 +260,8 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, h.config.Upload.MaxFileSize*100)
+	maxSize := h.getMaxFileSize(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, maxSize*100)
 
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		response.Error(w, http.StatusBadRequest, "Files too large or invalid form data")
@@ -227,6 +293,13 @@ func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Reque
 
 		format := detectImageFormat(header)
 		if format == "" {
+			file.Close()
+			failed = append(failed, fileHeader.Filename)
+			continue
+		}
+
+		// Check if format is allowed by settings
+		if !h.isAllowedFormat(r.Context(), format) {
 			file.Close()
 			failed = append(failed, fileHeader.Filename)
 			continue

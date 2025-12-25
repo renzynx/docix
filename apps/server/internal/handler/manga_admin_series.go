@@ -88,7 +88,7 @@ func (h *MangaAdminHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i := range seriesList {
-		seriesList[i].CoverImageURL = h.signCoverImage(seriesList[i].CoverImage)
+		seriesList[i].CoverImageURL = h.signCoverImage(r.Context(), seriesList[i].CoverImage)
 
 		if len(seriesList[i].TagIDs) > 0 {
 			tagCursor, err := h.DB.Tags.Find(r.Context(), bson.M{"_id": bson.M{"$in": seriesList[i].TagIDs}})
@@ -174,7 +174,7 @@ func (h *MangaAdminHandler) CreateSeries(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	series.CoverImageURL = h.signCoverImage(series.CoverImage)
+	series.CoverImageURL = h.signCoverImage(r.Context(), series.CoverImage)
 
 	response.JSON(w, http.StatusCreated, series)
 }
@@ -215,7 +215,7 @@ func (h *MangaAdminHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	series.CoverImageURL = h.signCoverImage(series.CoverImage)
+	series.CoverImageURL = h.signCoverImage(r.Context(), series.CoverImage)
 
 	response.JSON(w, http.StatusOK, series)
 }
@@ -302,7 +302,7 @@ func (h *MangaAdminHandler) UpdateSeries(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	series.CoverImageURL = h.signCoverImage(series.CoverImage)
+	series.CoverImageURL = h.signCoverImage(r.Context(), series.CoverImage)
 
 	response.JSON(w, http.StatusOK, series)
 }

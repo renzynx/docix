@@ -159,7 +159,7 @@ func (h *MangaAdminHandler) GetChapter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i := range pages {
-		pages[i].ImageURLSigned = h.signCoverImage(pages[i].ImageURL)
+		pages[i].ImageURLSigned = h.signCoverImage(r.Context(), pages[i].ImageURL)
 	}
 
 	resp := models.ChapterWithPages{

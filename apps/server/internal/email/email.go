@@ -1,14 +1,20 @@
 package email
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/smtp"
 	"strings"
 
 	"github.com/renzynx/docix/server/internal/config"
+	"github.com/renzynx/docix/server/internal/models"
 	log "github.com/sirupsen/logrus"
 )
+
+// ErrSMTPDisabled is returned when SMTP is not enabled in settings
+var ErrSMTPDisabled = errors.New("SMTP is not enabled")
 
 type Message struct {
 	To      []string
@@ -17,46 +23,114 @@ type Message struct {
 	IsHTML  bool
 }
 
+// SMTPSettingsProvider defines the interface for getting SMTP settings
+type SMTPSettingsProvider interface {
+	GetIntegrationsConfig(ctx context.Context) (*models.IntegrationsConfig, error)
+}
+
 // Sender interface defines the email sending contract
 type Sender interface {
 	Send(msg *Message) error
 }
 
 type Service struct {
-	sender Sender
-	from   string
+	config   *config.Config
+	settings SMTPSettingsProvider
 }
 
-func New(cfg *config.Config) *Service {
-	var sender Sender
-
-	if cfg.IsProduction {
-		smtpCfg := cfg.SMTP
-		sender = &smtpSender{
-			host:     smtpCfg.Host,
-			port:     smtpCfg.Port,
-			username: smtpCfg.Username,
-			password: smtpCfg.Password,
-			from:     smtpCfg.From,
-			useTLS:   smtpCfg.UseTLS,
-		}
-		log.Info("Email service initialized with SMTP sender")
-	} else {
-		sender = &consoleSender{}
-		log.Info("Email service initialized with console sender (dev mode)")
-	}
-
+// New creates a new email service
+// The service reads SMTP config from settings (database) with fallback to env config
+func New(cfg *config.Config, settings SMTPSettingsProvider) *Service {
 	return &Service{
-		sender: sender,
-		from:   cfg.SMTP.From,
+		config:   cfg,
+		settings: settings,
 	}
 }
 
-func (s *Service) Send(msg *Message) error {
-	return s.sender.Send(msg)
+// getSMTPConfig returns the SMTP configuration from settings or falls back to env config
+func (s *Service) getSMTPConfig(ctx context.Context) (host string, port int, username, password, from string, useTLS, enabled bool) {
+	// Try to get from settings first
+	if s.settings != nil {
+		integrations, err := s.settings.GetIntegrationsConfig(ctx)
+		if err == nil && integrations != nil {
+			// Check if SMTP is enabled in settings
+			if !integrations.SMTPEnabled {
+				return "", 0, "", "", "", false, false
+			}
+
+			// Use settings values, but password comes from env (security)
+			host = integrations.SMTPHost
+			port = integrations.SMTPPort
+			username = integrations.SMTPUsername
+			from = integrations.SMTPFromEmail
+			if integrations.SMTPFromName != "" {
+				from = fmt.Sprintf("%s <%s>", integrations.SMTPFromName, integrations.SMTPFromEmail)
+			}
+
+			// Password is stored encrypted or not exposed via API
+			// Use the password from settings if available, otherwise fall back to env
+			password = s.config.SMTP.Password
+			useTLS = s.config.SMTP.UseTLS
+			enabled = true
+
+			return host, port, username, password, from, useTLS, enabled
+		}
+	}
+
+	// Fall back to env config
+	smtpCfg := s.config.SMTP
+	if smtpCfg.Host == "" {
+		return "", 0, "", "", "", false, false
+	}
+
+	return smtpCfg.Host, smtpCfg.Port, smtpCfg.Username, smtpCfg.Password, smtpCfg.From, smtpCfg.UseTLS, true
 }
 
-func (s *Service) SendVerificationEmail(to, username, verificationLink string) error {
+// Send sends an email message
+func (s *Service) Send(ctx context.Context, msg *Message) error {
+	// In development mode, use console sender
+	if !s.config.IsProduction {
+		return s.sendToConsole(msg)
+	}
+
+	host, port, username, password, from, useTLS, enabled := s.getSMTPConfig(ctx)
+	if !enabled {
+		log.Warn("SMTP is not enabled, email not sent")
+		return ErrSMTPDisabled
+	}
+
+	sender := &smtpSender{
+		host:     host,
+		port:     port,
+		username: username,
+		password: password,
+		from:     from,
+		useTLS:   useTLS,
+	}
+
+	return sender.Send(msg)
+}
+
+// sendToConsole logs the email to console (dev mode)
+func (s *Service) sendToConsole(msg *Message) error {
+	log.WithFields(log.Fields{
+		"to":      strings.Join(msg.To, ", "),
+		"subject": msg.Subject,
+		"is_html": msg.IsHTML,
+	}).Info("Email sent (dev mode)")
+
+	fmt.Println("========== EMAIL ==========")
+	fmt.Printf("To: %s\n", strings.Join(msg.To, ", "))
+	fmt.Printf("Subject: %s\n", msg.Subject)
+	fmt.Println("------ Body ------")
+	fmt.Println(msg.Body)
+	fmt.Println("========== END EMAIL ==========")
+
+	return nil
+}
+
+// SendVerificationEmail sends an email verification link
+func (s *Service) SendVerificationEmail(ctx context.Context, to, username, verificationLink string) error {
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -81,7 +155,7 @@ func (s *Service) SendVerificationEmail(to, username, verificationLink string) e
 </html>
 `, username, verificationLink, verificationLink)
 
-	return s.Send(&Message{
+	return s.Send(ctx, &Message{
 		To:      []string{to},
 		Subject: "Verify Your Email - Docix",
 		Body:    body,
@@ -89,7 +163,8 @@ func (s *Service) SendVerificationEmail(to, username, verificationLink string) e
 	})
 }
 
-func (s *Service) SendPasswordResetEmail(to, username, resetLink string) error {
+// SendPasswordResetEmail sends a password reset link
+func (s *Service) SendPasswordResetEmail(ctx context.Context, to, username, resetLink string) error {
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -115,7 +190,7 @@ func (s *Service) SendPasswordResetEmail(to, username, resetLink string) error {
 </html>
 `, username, resetLink, resetLink)
 
-	return s.Send(&Message{
+	return s.Send(ctx, &Message{
 		To:      []string{to},
 		Subject: "Reset Your Password - Docix",
 		Body:    body,
@@ -123,23 +198,14 @@ func (s *Service) SendPasswordResetEmail(to, username, resetLink string) error {
 	})
 }
 
-type consoleSender struct{}
-
-func (s *consoleSender) Send(msg *Message) error {
-	log.WithFields(log.Fields{
-		"to":      strings.Join(msg.To, ", "),
-		"subject": msg.Subject,
-		"is_html": msg.IsHTML,
-	}).Info("Email sent (dev mode)")
-
-	fmt.Println("========== EMAIL ==========")
-	fmt.Printf("To: %s\n", strings.Join(msg.To, ", "))
-	fmt.Printf("Subject: %s\n", msg.Subject)
-	fmt.Println("------ Body ------")
-	fmt.Println(msg.Body)
-	fmt.Println("========== END EMAIL ==========")
-
-	return nil
+// SendTestEmail sends a test email to verify SMTP configuration
+func (s *Service) SendTestEmail(ctx context.Context, to string) error {
+	return s.Send(ctx, &Message{
+		To:      []string{to},
+		Subject: "Test Email - Docix",
+		Body:    "This is a test email from Docix. If you received this, your SMTP configuration is working correctly.",
+		IsHTML:  false,
+	})
 }
 
 type smtpSender struct {
