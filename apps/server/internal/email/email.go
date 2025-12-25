@@ -38,7 +38,6 @@ func New(cfg *config.Config, settings SMTPSettingsProvider) *Service {
 	}
 }
 
-// getSMTPConfig returns the SMTP configuration from settings or falls back to env config
 func (s *Service) getSMTPConfig(ctx context.Context) (host string, port int, username, password, from string, useTLS, enabled bool) {
 	// Try to get from settings first
 	if s.settings != nil {
@@ -61,7 +60,6 @@ func (s *Service) getSMTPConfig(ctx context.Context) (host string, port int, use
 		}
 	}
 
-	// Fall back to env config
 	smtpCfg := s.config.SMTP
 	if smtpCfg.Host == "" {
 		return "", 0, "", "", "", false, false
@@ -142,7 +140,6 @@ func (s *Service) SendVerificationEmail(ctx context.Context, to, username, verif
 	})
 }
 
-// SendPasswordResetEmail sends a password reset link
 func (s *Service) SendPasswordResetEmail(ctx context.Context, to, username, resetLink string) error {
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -209,7 +206,6 @@ func (s *smtpSender) Send(msg *Message) error {
 		headers["Content-Type"] = "text/plain; charset=UTF-8"
 	}
 
-	// Build message
 	var builder strings.Builder
 	for k, v := range headers {
 		builder.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
