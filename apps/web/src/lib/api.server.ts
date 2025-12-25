@@ -1,6 +1,6 @@
+import { api } from "@docix/api";
 import type { ChapterReader, SeriesWithChapters } from "@docix/types";
 import { cache } from "react";
-import { api } from "./api";
 import { getRequestHeaders } from "./tanstack-query/server";
 
 export const getSeriesBySlug = cache(async (slug: string) => {

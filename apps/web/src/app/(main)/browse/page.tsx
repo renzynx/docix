@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useState, useTransition } from "react";
 import { SeriesGrid, SeriesGridSkeleton } from "@/components/series-grid";
-import { api, listTagsQueryOptions } from "@/lib/api";
+import { api, listTagsQueryOptions } from "@docix/api";
 
 const SORT_OPTIONS = [
 	{ value: "latest", label: "Latest" },

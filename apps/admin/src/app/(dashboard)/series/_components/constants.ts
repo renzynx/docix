@@ -3,7 +3,7 @@ import {
 	createEmptyImageValue,
 	createImageValueFromFilename,
 	type ImageValue,
-} from "@/lib/upload";
+} from "@docix/api";
 
 export const SERIES_STATUSES: { value: SeriesStatus; label: string }[] = [
 	{ value: "ongoing", label: "Ongoing" },

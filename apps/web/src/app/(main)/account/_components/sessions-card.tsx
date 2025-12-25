@@ -25,7 +25,7 @@ import {
 	listSessionsQueryOptions,
 	queryKeys,
 	revokeSessionMutationOptions,
-} from "@/lib/api";
+} from "@docix/api";
 
 function getDeviceIcon(userAgent: string) {
 	const ua = userAgent.toLowerCase();

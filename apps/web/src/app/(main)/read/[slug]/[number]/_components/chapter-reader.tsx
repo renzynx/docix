@@ -10,7 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { getChapterQueryOptions } from "@/lib/api";
+import { getChapterQueryOptions } from "@docix/api";
 import { ReaderAffix } from "./reader-affix";
 
 interface ChapterReaderProps {

@@ -63,5 +63,9 @@ data/
 
 # Beads
 .beads/bd.sock*
-*/main
-*/api
+
+# Go compiled binaries
+apps/*/main
+apps/server/cmd/api/api
+apps/cdn/cmd/server/server
+apps/worker/cmd/main

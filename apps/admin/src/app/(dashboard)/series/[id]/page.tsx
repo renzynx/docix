@@ -21,7 +21,7 @@ import {
 	adminListChaptersQueryOptions,
 	adminUpdateChapterMutationOptions,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 import {
 	type ChapterFormData,
 	ChapterFormDialog,

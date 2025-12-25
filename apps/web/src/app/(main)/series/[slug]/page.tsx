@@ -1,7 +1,7 @@
 import type { SeriesWithChapters } from "@docix/types";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { queryKeys } from "@/lib/api";
+import { queryKeys } from "@docix/api";
 import { getSeriesBySlug } from "@/lib/api.server";
 import { getQueryClient, HydrateClient } from "@/lib/tanstack-query/server";
 import { SeriesDetail } from "./_components/series-detail";

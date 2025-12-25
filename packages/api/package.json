@@ -1,0 +1,42 @@
+{
+	"name": "@docix/api",
+	"version": "0.1.0",
+	"private": true,
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./client": {
+			"types": "./src/client.ts",
+			"default": "./src/client.ts"
+		},
+		"./keys": {
+			"types": "./src/keys.ts",
+			"default": "./src/keys.ts"
+		},
+		"./auth": {
+			"types": "./src/auth.ts",
+			"default": "./src/auth.ts"
+		},
+		"./manga": {
+			"types": "./src/manga.ts",
+			"default": "./src/manga.ts"
+		},
+		"./admin": {
+			"types": "./src/admin/index.ts",
+			"default": "./src/admin/index.ts"
+		},
+		"./upload": {
+			"types": "./src/upload.ts",
+			"default": "./src/upload.ts"
+		}
+	},
+	"dependencies": {
+		"@docix/types": "workspace:*",
+		"@tanstack/react-query": "catalog:",
+		"axios": "catalog:"
+	}
+}

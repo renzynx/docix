@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { SeriesGrid, SeriesGridSkeleton } from "@/components/series-grid";
-import { type ListSeriesParams, listSeriesQueryOptions } from "@/lib/api";
+import { type ListSeriesParams, listSeriesQueryOptions } from "@docix/api";
 
 interface SeriesSectionProps {
 	title: string;

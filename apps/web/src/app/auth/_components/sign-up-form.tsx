@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
-import { signUpMutationOptions } from "@/lib/api";
+import { signUpMutationOptions } from "@docix/api";
 
 const signUpSchema = z.object({
 	email: z.email("Invalid email address"),

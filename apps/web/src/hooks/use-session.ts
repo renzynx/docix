@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { getCurrentSessionQueryOptions } from "@/lib/api";
+import { getCurrentSessionQueryOptions } from "@docix/api";
 
 export function useSession() {
 	return useQuery({

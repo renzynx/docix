@@ -13,7 +13,7 @@ import { notFound } from "next/navigation";
 import {
 	adminGetSeriesQueryOptions,
 	adminListTagsQueryOptions,
-} from "@/lib/api";
+} from "@docix/api";
 import {
 	getQueryClient,
 	getRequestHeaders,

@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { queryKeys, signOutMutationOptions } from "@/lib/api";
+import { queryKeys, signOutMutationOptions } from "@docix/api";
 
 export default function SignOut() {
 	const router = useRouter();

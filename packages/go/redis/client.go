@@ -15,9 +15,6 @@ var (
 	clientErr  error
 )
 
-// GetClient returns a singleton Redis client instance.
-// The client is initialized on first call using configuration from environment.
-// Thread-safe for concurrent access.
 func GetClient() (*redis.Client, error) {
 	clientOnce.Do(func() {
 		cfg := LoadConfig()
@@ -31,8 +28,6 @@ func GetClient() (*redis.Client, error) {
 	return client, nil
 }
 
-// MustGetClient returns a singleton Redis client instance.
-// Panics if the client cannot be created.
 func MustGetClient() *redis.Client {
 	c, err := GetClient()
 	if err != nil {
@@ -41,8 +36,6 @@ func MustGetClient() *redis.Client {
 	return c
 }
 
-// NewClient creates a new Redis client from the given configuration.
-// Use GetClient() for singleton pattern.
 func NewClient(cfg *Config) (*redis.Client, error) {
 	var opts *redis.Options
 	var err error
@@ -82,14 +75,11 @@ func NewClient(cfg *Config) (*redis.Client, error) {
 	return rdb, nil
 }
 
-// NewClientFromURL creates a new Redis client from a URL string.
 func NewClientFromURL(url string) (*redis.Client, error) {
 	cfg := &Config{URL: url, PoolSize: 10}
 	return NewClient(cfg)
 }
 
-// HealthCheck performs a health check on the Redis connection.
-// Returns nil if healthy, error otherwise.
 func HealthCheck(ctx context.Context) error {
 	c, err := GetClient()
 	if err != nil {
@@ -103,7 +93,6 @@ func HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-// HealthCheckWithClient performs a health check on a specific Redis client.
 func HealthCheckWithClient(ctx context.Context, c *redis.Client) error {
 	if c == nil {
 		return fmt.Errorf("client is nil")
@@ -116,8 +105,6 @@ func HealthCheckWithClient(ctx context.Context, c *redis.Client) error {
 	return nil
 }
 
-// Close closes the singleton Redis client connection.
-// Safe to call multiple times.
 func Close() error {
 	if client != nil {
 		return client.Close()
@@ -125,7 +112,6 @@ func Close() error {
 	return nil
 }
 
-// Stats returns pool statistics for the singleton client.
 func Stats() (*redis.PoolStats, error) {
 	c, err := GetClient()
 	if err != nil {
@@ -135,8 +121,6 @@ func Stats() (*redis.PoolStats, error) {
 	return stats, nil
 }
 
-// ResetClient resets the singleton client (for testing purposes).
-// After calling this, the next GetClient call will create a new client.
 func ResetClient() {
 	if client != nil {
 		client.Close()

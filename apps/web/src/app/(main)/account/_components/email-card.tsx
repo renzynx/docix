@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import z from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
 import { useSuspenseSession } from "@/hooks/use-session";
-import { queryKeys, updateUserMutationOptions } from "@/lib/api";
+import { queryKeys, updateUserMutationOptions } from "@docix/api";
 
 const changeEmailSchema = z.object({
 	email: z.email("Invalid email address"),

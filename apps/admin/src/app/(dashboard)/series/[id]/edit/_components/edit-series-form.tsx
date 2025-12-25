@@ -8,7 +8,7 @@ import {
 	adminListTagsQueryOptions,
 	adminUpdateSeriesMutationOptions,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 import {
 	SeriesForm,
 	type SeriesFormData,

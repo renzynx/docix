@@ -8,7 +8,7 @@ import {
 	TabsTrigger,
 } from "@docix/ui/components/tabs";
 import { useQuery } from "@tanstack/react-query";
-import { adminGetSiteSettingsQueryOptions } from "@/lib/api";
+import { adminGetSiteSettingsQueryOptions } from "@docix/api";
 import {
 	ContentSettings,
 	IntegrationsSettings,

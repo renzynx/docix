@@ -10,7 +10,7 @@ import {
 } from "@docix/ui/components/card";
 import { Spinner } from "@docix/ui/components/spinner";
 import { useQuery } from "@tanstack/react-query";
-import { adminGetSystemInfoQueryOptions } from "@/lib/api";
+import { adminGetSystemInfoQueryOptions } from "@docix/api";
 
 export function SystemInfoCard() {
 	const { data: info, isLoading } = useQuery(adminGetSystemInfoQueryOptions());

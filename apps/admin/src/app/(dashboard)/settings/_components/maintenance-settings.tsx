@@ -20,7 +20,7 @@ import {
 	adminPerformMaintenanceAction,
 	adminUpdateSiteSettings,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 
 interface MaintenanceSettingsProps {
 	settings: MaintenanceConfig;

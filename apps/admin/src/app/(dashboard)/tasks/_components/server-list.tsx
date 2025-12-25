@@ -14,7 +14,7 @@ import { ServerStack01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { adminListServersQueryOptions } from "@/lib/api";
+import { adminListServersQueryOptions } from "@docix/api";
 
 export function ServerList() {
 	const { data, isLoading } = useQuery(adminListServersQueryOptions());

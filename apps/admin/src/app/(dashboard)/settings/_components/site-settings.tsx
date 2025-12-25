@@ -15,7 +15,7 @@ import { Textarea } from "@docix/ui/components/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { adminUpdateSiteSettings, queryKeys } from "@/lib/api";
+import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 
 interface SiteSettingsProps {
 	settings: SiteConfig;

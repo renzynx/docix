@@ -38,7 +38,7 @@ import {
 	adminRunAllScheduledTasks,
 	adminUnpauseQueue,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 
 interface QueueCardProps {
 	queue: QueueInfo;

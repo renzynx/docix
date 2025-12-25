@@ -5,7 +5,7 @@ import { Input } from "@docix/ui/components/input";
 import { Spinner } from "@docix/ui/components/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { adminListUsersQueryOptions } from "@/lib/api";
+import { adminListUsersQueryOptions } from "@docix/api";
 import { BanUserDialog, UserRolesDialog, UsersTable } from "./_components";
 
 export default function UsersPage() {

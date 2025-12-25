@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
-import { type ImageValue, uploadImageValue } from "@/lib/upload";
+import { type ImageValue, uploadImageValue } from "@docix/api";
 import {
 	defaultSeriesFormValues,
 	SERIES_STATUSES,

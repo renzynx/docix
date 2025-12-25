@@ -22,7 +22,7 @@ import {
 	adminListRolesQueryOptions,
 	adminRemoveRoleMutationOptions,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 
 interface UserRolesDialogProps {
 	user: User | null;

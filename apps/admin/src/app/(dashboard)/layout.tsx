@@ -3,7 +3,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import {
 	getCurrentSessionQueryOptions,
 	getUserPermissionsQueryOptions,
-} from "@/lib/api";
+} from "@docix/api";
 import { type AdminSession, hasAdminAccess } from "@/lib/auth";
 import {
 	getQueryClient,

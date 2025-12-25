@@ -11,6 +11,7 @@
 		"clean": "rm -rf .next"
 	},
 	"dependencies": {
+		"@docix/api": "workspace:*",
 		"@docix/types": "workspace:*",
 		"@docix/ui": "workspace:*",
 		"@hugeicons/core-free-icons": "catalog:",

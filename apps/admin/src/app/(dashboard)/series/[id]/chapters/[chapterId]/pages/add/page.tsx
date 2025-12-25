@@ -15,8 +15,8 @@ import {
 	adminGetChapterQueryOptions,
 	adminGetSeriesQueryOptions,
 	queryKeys,
-} from "@/lib/api";
-import { uploadImages } from "@/lib/upload";
+} from "@docix/api";
+import { uploadImages } from "@docix/api";
 import { BulkImageUpload, type PendingPage } from "./_components";
 
 export default function AddPagesPage() {

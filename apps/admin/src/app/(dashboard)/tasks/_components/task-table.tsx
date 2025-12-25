@@ -40,7 +40,7 @@ import {
 	adminListTasksQueryOptions,
 	adminRunTask,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 
 interface TaskTableProps {
 	queueName: string;

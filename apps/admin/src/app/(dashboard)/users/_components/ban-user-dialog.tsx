@@ -20,7 +20,7 @@ import {
 	adminBanUserMutationOptions,
 	adminUnbanUserMutationOptions,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 
 interface BanUserDialogProps {
 	user: User | null;

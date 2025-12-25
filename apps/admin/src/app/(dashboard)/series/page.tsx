@@ -26,7 +26,7 @@ import {
 	adminDeleteSeriesMutationOptions,
 	adminListSeriesQueryOptions,
 	queryKeys,
-} from "@/lib/api";
+} from "@docix/api";
 import { DeleteConfirmDialog, getStatusColor } from "./_components";
 
 export default function SeriesPage() {

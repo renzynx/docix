@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import Autoplay from "embla-carousel-autoplay";
 import Link from "next/link";
 import { useRef } from "react";
-import { listSeriesQueryOptions } from "@/lib/api";
+import { listSeriesQueryOptions } from "@docix/api";
 
 export function FeaturedCarousel() {
 	const { data, isPending, isError } = useQuery(

@@ -107,6 +107,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.3)
+      '@docix/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@docix/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -175,6 +178,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@docix/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@docix/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -244,6 +250,18 @@ importers:
         version: 5.9.3
 
   apps/worker: {}
+
+  packages/api:
+    dependencies:
+      '@docix/types':
+        specifier: workspace:*
+        version: link:../types
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.90.12(react@19.2.3)
+      axios:
+        specifier: 'catalog:'
+        version: 1.13.2
 
   packages/types: {}
 
