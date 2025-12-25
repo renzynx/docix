@@ -13,6 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type SMTPSettingsProvider interface {
+	GetIntegrationsConfig(ctx context.Context) (*models.IntegrationsConfig, error)
+}
+
 var ErrSMTPDisabled = errors.New("SMTP is not enabled")
 
 type Message struct {
@@ -46,6 +50,7 @@ func (s *Service) getSMTPConfig(ctx context.Context) (host string, port int, use
 				return "", 0, "", "", "", false, false
 			}
 
+			host = integrations.SMTPHost
 			port = integrations.SMTPPort
 			username = integrations.SMTPUsername
 			from = integrations.SMTPFromEmail

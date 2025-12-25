@@ -4,4 +4,10 @@ packages:
     type_mappings:
       "bson.ObjectID": "string"
       "time.Time": "string"
+      "any": "any"
+      "map[string]int64": "Record<string, number>"
+      "map[string]string": "Record<string, string>"
     fallback_type: "any"
+    include_unexported: false
+    export_tag: "json"
+    ignore_files: []
