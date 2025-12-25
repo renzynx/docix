@@ -57,3 +57,6 @@ uploads/
 
 # Local data directory (Docker volumes)
 data/
+
+# Build binaries
+/apps/*/main
