@@ -58,7 +58,6 @@ func Load() *Config {
 		}
 	}
 
-	// Check if any trusted origin uses HTTPS
 	useSecureCookie := false
 	for _, origin := range trustedOrigins {
 		if strings.HasPrefix(origin, "https://") {
@@ -144,7 +143,7 @@ func loadUploadConfig() UploadConfig {
 		pendingDirectory = directory + "/pending"
 	}
 
-	maxFileSize := int64(10 * 1024 * 1024) // 10MB default
+	maxFileSize := int64(10 * 1024 * 1024)
 	if sizeStr := os.Getenv("UPLOAD_MAX_SIZE"); sizeStr != "" {
 		if size, err := strconv.ParseInt(sizeStr, 10, 64); err == nil {
 			maxFileSize = size
@@ -183,7 +182,7 @@ func loadCDNConfig() CDNConfig {
 		hmacSecret = "change-me-in-production"
 	}
 
-	urlTTLSecs := int64(24 * 60 * 60) // 24 hours default
+	urlTTLSecs := int64(24 * 60 * 60)
 	if ttl := os.Getenv("CDN_URL_TTL_SECS"); ttl != "" {
 		if parsed, err := strconv.ParseInt(ttl, 10, 64); err == nil {
 			urlTTLSecs = parsed
