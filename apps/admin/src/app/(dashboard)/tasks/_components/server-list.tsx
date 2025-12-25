@@ -14,10 +14,10 @@ import { ServerStack01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { listServersQueryOptions } from "@/lib/api.tasks";
+import { adminListServersQueryOptions } from "@/lib/api.generated";
 
 export function ServerList() {
-	const { data: servers, isLoading } = useQuery(listServersQueryOptions());
+	const { data, isLoading } = useQuery(adminListServersQueryOptions());
 
 	if (isLoading) {
 		return (
@@ -27,7 +27,7 @@ export function ServerList() {
 		);
 	}
 
-	if (!servers?.length) {
+	if (!data?.servers?.length) {
 		return (
 			<Card>
 				<CardContent className="py-8 text-center text-muted-foreground">
@@ -39,7 +39,7 @@ export function ServerList() {
 
 	return (
 		<div className="space-y-4">
-			{servers.map((server) => (
+			{data.servers.map((server) => (
 				<ServerCard key={`${server.host}-${server.pid}`} server={server} />
 			))}
 		</div>

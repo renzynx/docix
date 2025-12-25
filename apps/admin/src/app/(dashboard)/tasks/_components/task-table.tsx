@@ -35,10 +35,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import {
-	listQueueTasksQueryOptions,
-	taskMutations,
-	taskQueryKeys,
-} from "@/lib/api.tasks";
+	adminArchiveTask,
+	adminDeleteTask,
+	adminListTasksQueryOptions,
+	adminRunTask,
+	queryKeys,
+} from "@/lib/api.generated";
 
 interface TaskTableProps {
 	queueName: string;
@@ -59,39 +61,51 @@ export function TaskTable({ queueName }: TaskTableProps) {
 	const queryClient = useQueryClient();
 
 	const { data, isLoading } = useQuery(
-		listQueueTasksQueryOptions(queueName, state, page),
+		adminListTasksQueryOptions(queueName, {
+			state,
+			page: String(page),
+		}),
 	);
 
 	const runMutation = useMutation({
 		mutationFn: ({ taskId }: { taskId: string }) =>
-			taskMutations.runTask(queueName, taskId),
+			adminRunTask(queueName, taskId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: taskQueryKeys.queueTasks(queueName, state, page),
+				queryKey: queryKeys.adminTasks(queueName, {
+					state,
+					page: String(page),
+				}),
 			});
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
 		},
 	});
 
 	const archiveMutation = useMutation({
 		mutationFn: ({ taskId }: { taskId: string }) =>
-			taskMutations.archiveTask(queueName, taskId),
+			adminArchiveTask(queueName, taskId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: taskQueryKeys.queueTasks(queueName, state, page),
+				queryKey: queryKeys.adminTasks(queueName, {
+					state,
+					page: String(page),
+				}),
 			});
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
 		},
 	});
 
 	const deleteMutation = useMutation({
 		mutationFn: ({ taskId }: { taskId: string }) =>
-			taskMutations.deleteTask(queueName, taskId),
+			adminDeleteTask(queueName, taskId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: taskQueryKeys.queueTasks(queueName, state, page),
+				queryKey: queryKeys.adminTasks(queueName, {
+					state,
+					page: String(page),
+				}),
 			});
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
 		},
 	});
 

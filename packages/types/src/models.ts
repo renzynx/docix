@@ -4,151 +4,151 @@
 // source: auth.go
 
 export interface SignUpRequest {
-  email: string;
-  password: string;
-  username: string;
+	email: string;
+	password: string;
+	username: string;
 }
 export interface SignInRequest {
-  email: string;
-  password: string;
+	email: string;
+	password: string;
 }
 export interface AuthResponse {
-  message: string;
-  user?: User;
+	message: string;
+	user?: User;
 }
 export interface MessageResponse {
-  message: string;
+	message: string;
 }
 export interface CurrentSessionResponse {
-  session: SessionListItem;
-  user: User;
-  permissions: string[];
-  roles: string[];
+	session: SessionListItem;
+	user: User;
+	permissions: string[];
+	roles: string[];
 }
 export interface UserPermissionsResponse {
-  permissions: string[];
-  roles: string[];
+	permissions: string[];
+	roles: string[];
 }
 export interface UpdateUserResponse {
-  message: string;
-  email_verification_required?: boolean;
-  email_verification_token?: string;
+	message: string;
+	email_verification_required?: boolean;
+	email_verification_token?: string;
 }
 export interface RequestVerificationResponse {
-  message: string;
-  token: string;
+	message: string;
+	token: string;
 }
 export interface HealthResponse {
-  status: string;
+	status: string;
 }
 export interface ErrorResponse {
-  error: string;
-  message: string;
+	error: string;
+	message: string;
 }
 export interface RevokeSessionRequest {
-  session_id: string;
+	session_id: string;
 }
 export interface CreateRoleRequest {
-  name: string;
-  display_name: string;
-  description: string;
-  color: string;
-  priority: number /* int */;
-  permissions: string[];
+	name: string;
+	display_name: string;
+	description: string;
+	color: string;
+	priority: number /* int */;
+	permissions: string[];
 }
 export interface UpdateRoleRequest {
-  display_name?: string;
-  description?: string;
-  color?: string;
-  priority?: number /* int */;
-  permissions?: string[];
+	display_name?: string;
+	description?: string;
+	color?: string;
+	priority?: number /* int */;
+	permissions?: string[];
 }
 export interface AssignRoleRequest {
-  user_id: string;
-  role_id: string;
+	user_id: string;
+	role_id: string;
 }
 export interface BanUserRequest {
-  user_id: string;
-  reason: string;
+	user_id: string;
+	reason: string;
 }
 export interface UpdateUserRequest {
-  email?: string;
-  username?: string;
+	email?: string;
+	username?: string;
 }
 export interface VerifyEmailRequest {
-  token: string;
+	token: string;
 }
 export interface ChangePasswordRequest {
-  current_password: string;
-  new_password: string;
+	current_password: string;
+	new_password: string;
 }
 export interface BookmarkStatusResponse {
-  bookmarked: boolean;
-  bookmark_id?: string;
+	bookmarked: boolean;
+	bookmark_id?: string;
 }
 export interface ToggleBookmarkResponse {
-  bookmarked: boolean;
-  bookmark_id?: string;
-  message: string;
+	bookmarked: boolean;
+	bookmark_id?: string;
+	message: string;
 }
 
 //////////
 // source: common.go
 
-export interface PaginatedResponse<T extends any> {
-  data: T[];
-  total: number /* int64 */;
-  page: number /* int */;
-  limit: number /* int */;
-  total_pages: number /* int */;
+export interface PaginatedResponse<T> {
+	data: T[];
+	total: number /* int64 */;
+	page: number /* int */;
+	limit: number /* int */;
+	total_pages: number /* int */;
 }
 export interface UploadResponse {
-  url: string;
-  filename: string;
+	url: string;
+	filename: string;
 }
 export interface AsyncUploadResponse {
-  upload_id: string;
-  status: string;
+	upload_id: string;
+	status: string;
 }
 export interface AsyncBulkUploadResponse {
-  uploads: AsyncUploadResponse[];
-  failed?: string[];
+	uploads: AsyncUploadResponse[];
+	failed?: string[];
 }
 export interface UploadStatusResponse {
-  upload_id: string;
-  status: string;
-  filename?: string;
-  error?: string;
-  width?: number /* int */;
-  height?: number /* int */;
-  size?: number /* int64 */;
+	upload_id: string;
+	status: string;
+	filename?: string;
+	error?: string;
+	width?: number /* int */;
+	height?: number /* int */;
+	size?: number /* int64 */;
 }
 export interface BulkUploadResponse {
-  uploads: UploadResponse[];
-  failed?: string[];
+	uploads: UploadResponse[];
+	failed?: string[];
 }
 export interface DashboardStats {
-  total_users: number /* int64 */;
-  total_series: number /* int64 */;
-  total_chapters: number /* int64 */;
-  total_views: number /* int64 */;
-  verified_users: number /* int64 */;
-  banned_users: number /* int64 */;
-  series_by_status: { [key: string]: number /* int64 */};
-  user_registrations: DailyCount[];
-  chapter_uploads: DailyCount[];
-  top_series_by_views: SeriesViewCount[];
-  recent_series: Series[];
-  recent_users: User[];
+	total_users: number /* int64 */;
+	total_series: number /* int64 */;
+	total_chapters: number /* int64 */;
+	total_views: number /* int64 */;
+	verified_users: number /* int64 */;
+	banned_users: number /* int64 */;
+	series_by_status: { [key: string]: number /* int64 */ };
+	user_registrations: DailyCount[];
+	chapter_uploads: DailyCount[];
+	top_series_by_views: SeriesViewCount[];
+	recent_series: Series[];
+	recent_users: User[];
 }
 export interface DailyCount {
-  date: string;
-  count: number /* int64 */;
+	date: string;
+	count: number /* int64 */;
 }
 export interface SeriesViewCount {
-  id: string;
-  title: string;
-  view_count: number /* int64 */;
+	id: string;
+	title: string;
+	view_count: number /* int64 */;
 }
 
 //////////
@@ -160,236 +160,236 @@ export const SeriesStatusCompleted: SeriesStatus = "completed";
 export const SeriesStatusHiatus: SeriesStatus = "hiatus";
 export const SeriesStatusCancelled: SeriesStatus = "cancelled";
 export interface Tag {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	name: string;
+	slug: string;
+	description?: string;
+	created_at: string;
+	updated_at: string;
 }
 export interface Series {
-  id: string;
-  title: string;
-  slug: string;
-  description?: string;
-  cover_image?: string;
-  cover_image_url?: string;
-  author?: string;
-  artist?: string;
-  status: SeriesStatus;
-  tags?: Tag[];
-  view_count: number /* int64 */;
-  chapter_count: number /* int */;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	title: string;
+	slug: string;
+	description?: string;
+	cover_image?: string;
+	cover_image_url?: string;
+	author?: string;
+	artist?: string;
+	status: SeriesStatus;
+	tags?: Tag[];
+	view_count: number /* int64 */;
+	chapter_count: number /* int */;
+	created_at: string;
+	updated_at: string;
 }
 export interface Chapter {
-  id: string;
-  series_id: string;
-  number: number /* float64 */;
-  title?: string;
-  page_count: number /* int */;
-  view_count: number /* int64 */;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	series_id: string;
+	number: number /* float64 */;
+	title?: string;
+	page_count: number /* int */;
+	view_count: number /* int64 */;
+	created_at: string;
+	updated_at: string;
 }
 export interface Page {
-  id: string;
-  chapter_id: string;
-  number: number /* int */;
-  image_url: string;
-  image_url_signed?: string;
-  created_at: string;
+	id: string;
+	chapter_id: string;
+	number: number /* int */;
+	image_url: string;
+	image_url_signed?: string;
+	created_at: string;
 }
 export interface Bookmark {
-  id: string;
-  user_id: string;
-  series_id: string;
-  created_at: string;
+	id: string;
+	user_id: string;
+	series_id: string;
+	created_at: string;
 }
 
 //////////
 // source: manga_requests.go
 
 export interface CreateTagRequest {
-  name: string;
-  description: string;
+	name: string;
+	description: string;
 }
 export interface UpdateTagRequest {
-  name?: string;
-  description?: string;
+	name?: string;
+	description?: string;
 }
 export interface CreateSeriesRequest {
-  title: string;
-  description: string;
-  cover_image: string;
-  author: string;
-  artist: string;
-  status: string;
-  tag_ids: string[];
+	title: string;
+	description: string;
+	cover_image: string;
+	author: string;
+	artist: string;
+	status: string;
+	tag_ids: string[];
 }
 export interface UpdateSeriesRequest {
-  title?: string;
-  description?: string;
-  cover_image?: string;
-  author?: string;
-  artist?: string;
-  status?: string;
-  tag_ids?: string[];
+	title?: string;
+	description?: string;
+	cover_image?: string;
+	author?: string;
+	artist?: string;
+	status?: string;
+	tag_ids?: string[];
 }
 export interface ListSeriesRequest {
-  page: number /* int */;
-  limit: number /* int */;
-  status: string;
-  search: string;
-  sort_by: string;
-  order: string;
+	page: number /* int */;
+	limit: number /* int */;
+	status: string;
+	search: string;
+	sort_by: string;
+	order: string;
 }
 export interface CreateChapterRequest {
-  number: number /* float64 */;
-  title: string;
+	number: number /* float64 */;
+	title: string;
 }
 export interface UpdateChapterRequest {
-  number?: number /* float64 */;
-  title?: string;
+	number?: number /* float64 */;
+	title?: string;
 }
 export interface ChapterWithPages {
-  id: string;
-  series_id: string;
-  number: number /* float64 */;
-  title?: string;
-  page_count: number /* int */;
-  view_count: number /* int64 */;
-  created_at: string;
-  updated_at: string;
-  pages?: Page[];
+	id: string;
+	series_id: string;
+	number: number /* float64 */;
+	title?: string;
+	page_count: number /* int */;
+	view_count: number /* int64 */;
+	created_at: string;
+	updated_at: string;
+	pages?: Page[];
 }
 export interface CreatePagesRequest {
-  pages: CreatePageItem[];
+	pages: CreatePageItem[];
 }
 export interface CreatePageItem {
-  number: number /* int */;
-  image_url: string;
+	number: number /* int */;
+	image_url: string;
 }
 export interface UpdatePageRequest {
-  number?: number /* int */;
+	number?: number /* int */;
 }
 export interface ReorderPagesRequest {
-  page_orders: PageOrder[];
+	page_orders: PageOrder[];
 }
 export interface PageOrder {
-  page_id: string;
-  number: number /* int */;
+	page_id: string;
+	number: number /* int */;
 }
 export interface SeriesWithChapters {
-  series: Series;
-  chapters: Chapter[];
+	series: Series;
+	chapters: Chapter[];
 }
 export interface ChapterNav {
-  id: string;
-  number: number /* float64 */;
-  title?: string;
+	id: string;
+	number: number /* float64 */;
+	title?: string;
 }
 export interface ChapterReader {
-  chapter: Chapter;
-  series_slug: string;
-  series_title: string;
-  total_chapters: number /* int */;
-  pages: Page[];
-  prev_chapter?: ChapterNav;
-  next_chapter?: ChapterNav;
+	chapter: Chapter;
+	series_slug: string;
+	series_title: string;
+	total_chapters: number /* int */;
+	pages: Page[];
+	prev_chapter?: ChapterNav;
+	next_chapter?: ChapterNav;
 }
 
 //////////
 // source: settings.go
 
 export interface SiteSettings {
-  id: string;
-  site: SiteConfig;
-  content: ContentConfig;
-  users: UserConfig;
-  integrations: IntegrationsConfig;
-  maintenance: MaintenanceConfig;
-  updated_at: string;
+	id: string;
+	site: SiteConfig;
+	content: ContentConfig;
+	users: UserConfig;
+	integrations: IntegrationsConfig;
+	maintenance: MaintenanceConfig;
+	updated_at: string;
 }
 export interface SiteConfig {
-  name: string;
-  description: string;
-  logo_url: string;
-  favicon_url: string;
-  default_locale: string;
-  meta_title: string;
-  meta_description: string;
+	name: string;
+	description: string;
+	logo_url: string;
+	favicon_url: string;
+	default_locale: string;
+	meta_title: string;
+	meta_description: string;
 }
 export interface ContentConfig {
-  max_upload_size_mb: number /* int */;
-  max_chapters_per_day: number /* int */;
-  allowed_image_types: string;
-  default_content_rating: string;
-  enable_comments: boolean;
-  require_moderation: boolean;
+	max_upload_size_mb: number /* int */;
+	max_chapters_per_day: number /* int */;
+	allowed_image_types: string;
+	default_content_rating: string;
+	enable_comments: boolean;
+	require_moderation: boolean;
 }
 export interface UserConfig {
-  registration_open: boolean;
-  require_email_verification: boolean;
-  default_role_id: string;
-  allow_username_change: boolean;
-  min_password_length: number /* int */;
-  max_login_attempts: number /* int */;
+	registration_open: boolean;
+	require_email_verification: boolean;
+	default_role_id: string;
+	allow_username_change: boolean;
+	min_password_length: number /* int */;
+	max_login_attempts: number /* int */;
 }
 export interface IntegrationsConfig {
-  smtp_host: string;
-  smtp_port: number /* int */;
-  smtp_username: string;
-  smtp_from_email: string;
-  smtp_from_name: string;
-  smtp_enabled: boolean;
-  cdn_enabled: boolean;
-  cdn_base_url: string;
+	smtp_host: string;
+	smtp_port: number /* int */;
+	smtp_username: string;
+	smtp_from_email: string;
+	smtp_from_name: string;
+	smtp_enabled: boolean;
+	cdn_enabled: boolean;
+	cdn_base_url: string;
 }
 export interface MaintenanceConfig {
-  enabled: boolean;
-  message: string;
-  allowed_ips: string;
-  scheduled_start?: string;
-  scheduled_end?: string;
+	enabled: boolean;
+	message: string;
+	allowed_ips: string;
+	scheduled_start?: string;
+	scheduled_end?: string;
 }
 export interface UpdateSiteSettingsRequest {
-  site?: SiteConfig;
-  content?: ContentConfig;
-  users?: UserConfig;
-  integrations?: UpdateIntegrationsRequest;
-  maintenance?: MaintenanceConfig;
+	site?: SiteConfig;
+	content?: ContentConfig;
+	users?: UserConfig;
+	integrations?: UpdateIntegrationsRequest;
+	maintenance?: MaintenanceConfig;
 }
 export interface UpdateIntegrationsRequest {
-  smtp_host?: string;
-  smtp_port?: number /* int */;
-  smtp_username?: string;
-  smtp_password?: string;
-  smtp_from_email?: string;
-  smtp_from_name?: string;
-  smtp_enabled?: boolean;
-  cdn_enabled?: boolean;
-  cdn_base_url?: string;
+	smtp_host?: string;
+	smtp_port?: number /* int */;
+	smtp_username?: string;
+	smtp_password?: string;
+	smtp_from_email?: string;
+	smtp_from_name?: string;
+	smtp_enabled?: boolean;
+	cdn_enabled?: boolean;
+	cdn_base_url?: string;
 }
 export interface MaintenanceAction {
-  action: string;
+	action: string;
 }
 export interface MaintenanceActionResponse {
-  success: boolean;
-  message: string;
+	success: boolean;
+	message: string;
 }
 export interface CacheStats {
-  redis_connected: boolean;
-  key_count: number /* int64 */;
-  memory_usage: string;
+	redis_connected: boolean;
+	key_count: number /* int64 */;
+	memory_usage: string;
 }
 export interface SystemInfo {
-  version: string;
-  go_version: string;
-  uptime: string;
-  database_status: string;
-  cache_stats: CacheStats;
+	version: string;
+	go_version: string;
+	uptime: string;
+	database_status: string;
+	cache_stats: CacheStats;
 }
 
 //////////
@@ -403,119 +403,119 @@ export const TaskStateRetry: TaskState = "retry";
 export const TaskStateArchived: TaskState = "archived";
 export const TaskStateCompleted: TaskState = "completed";
 export interface QueueInfo {
-  name: string;
-  paused: boolean;
-  pending: number /* int */;
-  active: number /* int */;
-  scheduled: number /* int */;
-  retry: number /* int */;
-  archived: number /* int */;
-  completed: number /* int */;
-  processed: number /* int */;
-  failed: number /* int */;
-  memory_usage: number /* int64 */;
-  latency: number;
+	name: string;
+	paused: boolean;
+	pending: number /* int */;
+	active: number /* int */;
+	scheduled: number /* int */;
+	retry: number /* int */;
+	archived: number /* int */;
+	completed: number /* int */;
+	processed: number /* int */;
+	failed: number /* int */;
+	memory_usage: number /* int64 */;
+	latency: number;
 }
 export interface TaskInfo {
-  id: string;
-  queue: string;
-  type: string;
-  payload: string;
-  state: TaskState;
-  max_retry: number /* int */;
-  retried: number /* int */;
-  last_error?: string;
-  next_process_at?: string;
-  timeout: number /* int64 */;
-  deadline?: string;
-  completed_at?: string;
-  result?: string;
+	id: string;
+	queue: string;
+	type: string;
+	payload: string;
+	state: TaskState;
+	max_retry: number /* int */;
+	retried: number /* int */;
+	last_error?: string;
+	next_process_at?: string;
+	timeout: number /* int64 */;
+	deadline?: string;
+	completed_at?: string;
+	result?: string;
 }
 export interface TaskListRequest {
-  queue: string;
-  state: TaskState;
-  page: number /* int */;
-  page_size: number /* int */;
+	queue: string;
+	state: TaskState;
+	page: number /* int */;
+	page_size: number /* int */;
 }
 export interface TaskListResponse {
-  tasks: TaskInfo[];
-  total_count: number /* int */;
-  page: number /* int */;
-  page_size: number /* int */;
+	tasks: TaskInfo[];
+	total_count: number /* int */;
+	page: number /* int */;
+	page_size: number /* int */;
 }
 export interface QueueListResponse {
-  queues: QueueInfo[];
+	queues: QueueInfo[];
 }
 export interface TaskActionRequest {
-  queue: string;
-  task_id: string;
+	queue: string;
+	task_id: string;
 }
 export interface DailyStats {
-  date: string;
-  processed: number /* int */;
-  failed: number /* int */;
+	date: string;
+	processed: number /* int */;
+	failed: number /* int */;
 }
 export interface ServerInfo {
-  host: string;
-  pid: number /* int */;
-  concurrency: number /* int */;
-  queues: { [key: string]: number /* int */};
-  started: string;
-  status: string;
-  active_workers: WorkerInfo[];
+	host: string;
+	pid: number /* int */;
+	concurrency: number /* int */;
+	queues: { [key: string]: number /* int */ };
+	started: string;
+	status: string;
+	active_workers: WorkerInfo[];
 }
 export interface WorkerInfo {
-  task_id: string;
-  queue: string;
-  task_type: string;
-  started_at: string;
+	task_id: string;
+	queue: string;
+	task_type: string;
+	started_at: string;
 }
 export interface TaskStatsResponse {
-  queues: QueueInfo[];
-  servers: ServerInfo[];
+	queues: QueueInfo[];
+	servers: ServerInfo[];
 }
 
 //////////
 // source: user.go
 
 export interface User {
-  id: string;
-  email: string;
-  username?: string;
-  avatar?: string;
-  roles?: Role[];
-  verified_at?: string;
-  is_banned: boolean;
-  ban_reason?: string;
-  banned_at?: string;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	email: string;
+	username?: string;
+	avatar?: string;
+	roles?: Role[];
+	verified_at?: string;
+	is_banned: boolean;
+	ban_reason?: string;
+	banned_at?: string;
+	created_at: string;
+	updated_at: string;
 }
 export interface Session {
-  id: string;
-  user_id: string;
-  ip_address: string;
-  user_agent: string;
-  expires_at: string;
-  created_at: string;
+	id: string;
+	user_id: string;
+	ip_address: string;
+	user_agent: string;
+	expires_at: string;
+	created_at: string;
 }
 export interface Role {
-  id: string;
-  name: string;
-  display_name: string;
-  description: string;
-  color: string;
-  priority: number /* int */;
-  permissions: string[];
-  is_system: boolean;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	name: string;
+	display_name: string;
+	description: string;
+	color: string;
+	priority: number /* int */;
+	permissions: string[];
+	is_system: boolean;
+	created_at: string;
+	updated_at: string;
 }
 export interface SessionListItem {
-  id: string;
-  ip_address: string;
-  user_agent: string;
-  expires_at: string;
-  created_at: string;
-  is_current: boolean;
+	id: string;
+	ip_address: string;
+	user_agent: string;
+	expires_at: string;
+	created_at: string;
+	is_current: boolean;
 }

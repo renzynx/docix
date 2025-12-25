@@ -125,8 +125,8 @@ func emitMutationFunctions(buf *bytes.Buffer, result *ParseResult) {
 
 		// Build function signature
 		params := []string{}
-		if len(pathParams) > 0 {
-			params = append(params, pathParams[0]+": string")
+		for _, p := range pathParams {
+			params = append(params, p+": string")
 		}
 		if requestType != "" {
 			params = append(params, "request: "+requestType)
@@ -181,13 +181,34 @@ func emitMutationOptions(buf *bytes.Buffer, result *ParseResult) {
 		fmt.Fprintf(buf, "export const %s = (config?: AxiosRequestConfig) =>\n", optionFuncName)
 		buf.WriteString("\tmutationOptions({\n")
 
-		if len(pathParams) > 0 && requestType != "" {
-			// Both path param and request body
+		if len(pathParams) > 1 && requestType != "" {
+			// Multiple path params and request body - use object
+			paramTypes := []string{}
+			paramNames := []string{}
+			for _, p := range pathParams {
+				paramTypes = append(paramTypes, p+": string")
+				paramNames = append(paramNames, p)
+			}
+			fmt.Fprintf(buf, "\t\tmutationFn: ({ %s, ...request }: { %s } & %s) =>\n",
+				strings.Join(paramNames, ", "), strings.Join(paramTypes, "; "), requestType)
+			fmt.Fprintf(buf, "\t\t\t%s(%s, request, config),\n", funcName, strings.Join(paramNames, ", "))
+		} else if len(pathParams) > 1 {
+			// Multiple path params only - use object
+			paramTypes := []string{}
+			paramNames := []string{}
+			for _, p := range pathParams {
+				paramTypes = append(paramTypes, p+": string")
+				paramNames = append(paramNames, p)
+			}
+			fmt.Fprintf(buf, "\t\tmutationFn: ({ %s }: { %s }) => %s(%s, config),\n",
+				strings.Join(paramNames, ", "), strings.Join(paramTypes, "; "), funcName, strings.Join(paramNames, ", "))
+		} else if len(pathParams) == 1 && requestType != "" {
+			// Single path param and request body
 			fmt.Fprintf(buf, "\t\tmutationFn: ({ %s, ...request }: { %s: string } & %s) =>\n",
 				pathParams[0], pathParams[0], requestType)
 			fmt.Fprintf(buf, "\t\t\t%s(%s, request, config),\n", funcName, pathParams[0])
-		} else if len(pathParams) > 0 {
-			// Only path param
+		} else if len(pathParams) == 1 {
+			// Single path param only - keep simple
 			fmt.Fprintf(buf, "\t\tmutationFn: (%s: string) => %s(%s, config),\n",
 				pathParams[0], funcName, pathParams[0])
 		} else if requestType != "" {

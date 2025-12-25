@@ -19,6 +19,7 @@ import type {
 	CreateSeriesRequest,
 	CreateTagRequest,
 	CurrentSessionResponse,
+	DailyStats,
 	DashboardStats,
 	HealthResponse,
 	MaintenanceAction,
@@ -26,18 +27,24 @@ import type {
 	MessageResponse,
 	Page,
 	PaginatedResponse,
+	QueueInfo,
+	QueueListResponse,
 	ReorderPagesRequest,
 	RequestVerificationResponse,
 	RevokeSessionRequest,
 	Role,
 	Series,
 	SeriesWithChapters,
+	ServerInfo,
 	SessionListItem,
 	SignInRequest,
 	SignUpRequest,
 	SiteSettings,
 	SystemInfo,
 	Tag,
+	TaskInfo,
+	TaskListResponse,
+	TaskStatsResponse,
 	ToggleBookmarkResponse,
 	UpdateChapterRequest,
 	UpdatePageRequest,
@@ -73,6 +80,16 @@ export interface ListSeriesParams {
 	sort?: string;
 }
 
+export interface AdminListTasksParams {
+	state?: string;
+	page?: string;
+	page_size?: string;
+}
+
+export interface AdminGetHistoryParams {
+	days?: string;
+}
+
 export interface AdminListSeriesParams {
 	page?: number;
 	limit?: number;
@@ -102,6 +119,25 @@ export const queryKeys = {
 	tags: ["tags"] as const,
 	adminPermissions: ["admin", "permissions"] as const,
 	adminDashboardStats: ["admin", "stats"] as const,
+	adminStats: ["admin", "tasks"] as const,
+	adminServers: ["admin", "tasks", "servers"] as const,
+	adminQueues: ["admin", "tasks", "queues"] as const,
+	adminQueueInfoDetail: (name: string) =>
+		["admin", "tasks", "queues", "adminQueueInfoDetail", name] as const,
+	adminTasks: (name: string, params?: AdminListTasksParams) =>
+		["admin", "tasks", "queues", "tasks", "adminTasks", name, params] as const,
+	adminHistoryDetail: (name: string, params?: AdminGetHistoryParams) =>
+		[
+			"admin",
+			"tasks",
+			"queues",
+			"history",
+			"adminHistoryDetail",
+			name,
+			params,
+		] as const,
+	adminTaskDetail: (queue: string) =>
+		["admin", "tasks", "adminTaskDetail", queue] as const,
 	adminUploadStatusDetail: (id: string) =>
 		["admin", "upload", "status", "adminUploadStatusDetail", id] as const,
 	adminRoles: ["admin", "roles"] as const,
@@ -270,6 +306,106 @@ export const adminGetDashboardStatsQueryOptions = (
 			const { data } = await api.get<DashboardStats>("/admin/stats", config);
 			return data;
 		},
+	});
+
+export const adminGetStatsQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminStats,
+		queryFn: async () => {
+			const { data } = await api.get<TaskStatsResponse>("/admin/tasks", config);
+			return data;
+		},
+	});
+
+export const adminListServersQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminServers,
+		queryFn: async () => {
+			const { data } = await api.get<{ servers: ServerInfo[] }>(
+				"/admin/tasks/servers",
+				config,
+			);
+			return data;
+		},
+	});
+
+export const adminListQueuesQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminQueues,
+		queryFn: async () => {
+			const { data } = await api.get<QueueListResponse>(
+				"/admin/tasks/queues",
+				config,
+			);
+			return data;
+		},
+	});
+
+export const adminGetQueueInfoQueryOptions = (
+	name: string,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.adminQueueInfoDetail(name),
+		queryFn: async () => {
+			const { data } = await api.get<QueueInfo>(
+				`/admin/tasks/queues/${name}`,
+				config,
+			);
+			return data;
+		},
+		enabled: !!name,
+	});
+
+export const adminListTasksQueryOptions = (
+	name: string,
+	params?: AdminListTasksParams,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.adminTasks(name, params),
+		queryFn: async () => {
+			const { data } = await api.get<TaskListResponse>(
+				`/admin/tasks/queues/${name}/tasks`,
+				{ ...config, params },
+			);
+			return data;
+		},
+		enabled: !!name,
+	});
+
+export const adminGetHistoryQueryOptions = (
+	name: string,
+	params?: AdminGetHistoryParams,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.adminHistoryDetail(name, params),
+		queryFn: async () => {
+			const { data } = await api.get<{ history: DailyStats[] }>(
+				`/admin/tasks/queues/${name}/history`,
+				{ ...config, params },
+			);
+			return data;
+		},
+		enabled: !!name,
+	});
+
+export const adminGetTaskQueryOptions = (
+	queue: string,
+	id: string,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.adminTaskDetail(queue),
+		queryFn: async () => {
+			const { data } = await api.get<TaskInfo>(
+				`/admin/tasks/${queue}/${id}`,
+				config,
+			);
+			return data;
+		},
+		enabled: !!queue,
 	});
 
 export const adminGetUploadStatusQueryOptions = (
@@ -536,6 +672,103 @@ export const incrementChapterView = async (
 	const { data } = await api.post<MessageResponse>(
 		`/chapters/${id}/view`,
 		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminPauseQueue = async (
+	name: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<MessageResponse>(
+		`/admin/tasks/queues/${name}/pause`,
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminUnpauseQueue = async (
+	name: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<MessageResponse>(
+		`/admin/tasks/queues/${name}/unpause`,
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminRunAllScheduledTasks = async (
+	name: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<{ message: string; count: number }>(
+		`/admin/tasks/queues/${name}/run-scheduled`,
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminRunAllRetryTasks = async (
+	name: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<{ message: string; count: number }>(
+		`/admin/tasks/queues/${name}/run-retry`,
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminDeleteAllArchivedTasks = async (
+	name: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.delete<{ message: string; count: number }>(
+		`/admin/tasks/queues/${name}/archived`,
+		config,
+	);
+	return data;
+};
+
+export const adminRunTask = async (
+	queue: string,
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<MessageResponse>(
+		`/admin/tasks/${queue}/${id}/run`,
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminArchiveTask = async (
+	queue: string,
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<MessageResponse>(
+		`/admin/tasks/${queue}/${id}/archive`,
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminDeleteTask = async (
+	queue: string,
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.delete<MessageResponse>(
+		`/admin/tasks/${queue}/${id}`,
 		config,
 	);
 	return data;
@@ -875,6 +1108,55 @@ export const incrementChapterViewMutationOptions = (
 ) =>
 	mutationOptions({
 		mutationFn: (id: string) => incrementChapterView(id, config),
+	});
+
+export const adminPauseQueueMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: (name: string) => adminPauseQueue(name, config),
+	});
+
+export const adminUnpauseQueueMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: (name: string) => adminUnpauseQueue(name, config),
+	});
+
+export const adminRunAllScheduledTasksMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: (name: string) => adminRunAllScheduledTasks(name, config),
+	});
+
+export const adminRunAllRetryTasksMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: (name: string) => adminRunAllRetryTasks(name, config),
+	});
+
+export const adminDeleteAllArchivedTasksMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: (name: string) => adminDeleteAllArchivedTasks(name, config),
+	});
+
+export const adminRunTaskMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: ({ queue, id }: { queue: string; id: string }) =>
+			adminRunTask(queue, id, config),
+	});
+
+export const adminArchiveTaskMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: ({ queue, id }: { queue: string; id: string }) =>
+			adminArchiveTask(queue, id, config),
+	});
+
+export const adminDeleteTaskMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: ({ queue, id }: { queue: string; id: string }) =>
+			adminDeleteTask(queue, id, config),
 	});
 
 export const adminUploadFileMutationOptions = (config?: AxiosRequestConfig) =>

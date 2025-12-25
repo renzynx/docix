@@ -31,7 +31,14 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { taskMutations, taskQueryKeys } from "@/lib/api.tasks";
+import {
+	adminDeleteAllArchivedTasks,
+	adminPauseQueue,
+	adminRunAllRetryTasks,
+	adminRunAllScheduledTasks,
+	adminUnpauseQueue,
+	queryKeys,
+} from "@/lib/api.generated";
 
 interface QueueCardProps {
 	queue: QueueInfo;
@@ -43,39 +50,39 @@ export function QueueCard({ queue, onSelect, isSelected }: QueueCardProps) {
 	const queryClient = useQueryClient();
 
 	const pauseMutation = useMutation({
-		mutationFn: () => taskMutations.pauseQueue(queue.name),
+		mutationFn: () => adminPauseQueue(queue.name),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminStats });
 		},
 	});
 
 	const unpauseMutation = useMutation({
-		mutationFn: () => taskMutations.unpauseQueue(queue.name),
+		mutationFn: () => adminUnpauseQueue(queue.name),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminStats });
 		},
 	});
 
 	const runScheduledMutation = useMutation({
-		mutationFn: () => taskMutations.runAllScheduledTasks(queue.name),
+		mutationFn: () => adminRunAllScheduledTasks(queue.name),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
 		},
 	});
 
 	const runRetryMutation = useMutation({
-		mutationFn: () => taskMutations.runAllRetryTasks(queue.name),
+		mutationFn: () => adminRunAllRetryTasks(queue.name),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
 		},
 	});
 
 	const deleteArchivedMutation = useMutation({
-		mutationFn: () => taskMutations.deleteAllArchivedTasks(queue.name),
+		mutationFn: () => adminDeleteAllArchivedTasks(queue.name),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: taskQueryKeys.queues });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
 		},
 	});
 

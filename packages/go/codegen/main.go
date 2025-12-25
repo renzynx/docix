@@ -34,16 +34,22 @@ func main() {
 	if config.HandlerDir == "" {
 		config.HandlerDir = filepath.Join(serverDir, "internal/handler")
 	}
-	if config.OutputFile == "" {
-		// Find project root and output to apps/web
-		projectRoot := filepath.Dir(filepath.Dir(serverDir))
-		config.OutputFile = filepath.Join(projectRoot, "apps/web/src/lib/api.generated.ts")
+	projectRoot := filepath.Dir(filepath.Dir(serverDir))
+
+	outputFiles := []string{}
+	if config.OutputFile != "" {
+		outputFiles = append(outputFiles, config.OutputFile)
+	} else {
+		outputFiles = []string{
+			filepath.Join(projectRoot, "apps/web/src/lib/api.generated.ts"),
+			filepath.Join(projectRoot, "apps/admin/src/lib/api.generated.ts"),
+		}
 	}
 
 	fmt.Println("Generating API client...")
 	fmt.Printf("  Routes file: %s\n", config.RoutesFile)
 	fmt.Printf("  Handler dir: %s\n", config.HandlerDir)
-	fmt.Printf("  Output file: %s\n", config.OutputFile)
+	fmt.Printf("  Output files: %v\n", outputFiles)
 
 	routes, handlerVarToType, err := ParseRoutes(config.RoutesFile)
 	if err != nil {
@@ -65,13 +71,16 @@ func main() {
 
 	output := Generate(result, config)
 
-	if err := os.MkdirAll(filepath.Dir(config.OutputFile), 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating output directory: %v\n", err)
-		os.Exit(1)
-	}
-	if err := os.WriteFile(config.OutputFile, []byte(output), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
-		os.Exit(1)
+	for _, outputFile := range outputFiles {
+		if err := os.MkdirAll(filepath.Dir(outputFile), 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating output directory for %s: %v\n", outputFile, err)
+			os.Exit(1)
+		}
+		if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing output to %s: %v\n", outputFile, err)
+			os.Exit(1)
+		}
+		fmt.Printf("  Written: %s\n", outputFile)
 	}
 
 	fmt.Println("Done!")

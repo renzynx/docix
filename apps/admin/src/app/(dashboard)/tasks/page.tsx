@@ -16,13 +16,13 @@ import {
 } from "@docix/ui/components/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { getTaskStatsQueryOptions } from "@/lib/api.tasks";
+import { adminGetStatsQueryOptions } from "@/lib/api.generated";
 import { QueueCard, ServerList, TaskTable } from "./_components";
 
 export default function TasksPage() {
 	const [selectedQueue, setSelectedQueue] = useState<string | null>(null);
 
-	const { data: stats, isLoading } = useQuery(getTaskStatsQueryOptions());
+	const { data: stats, isLoading } = useQuery(adminGetStatsQueryOptions());
 
 	if (isLoading) {
 		return (
