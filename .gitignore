@@ -60,3 +60,6 @@ data/
 
 # Build binaries
 /apps/*/main
+
+# Beads
+.beads/bd.sock*
