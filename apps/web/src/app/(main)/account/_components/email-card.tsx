@@ -1,5 +1,6 @@
 "use client";
 
+import { queryKeys, updateUserMutationOptions } from "@docix/api";
 import {
 	Card,
 	CardContent,
@@ -14,7 +15,6 @@ import { toast } from "sonner";
 import z from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
 import { useSuspenseSession } from "@/hooks/use-session";
-import { queryKeys, updateUserMutationOptions } from "@docix/api";
 
 const changeEmailSchema = z.object({
 	email: z.email("Invalid email address"),
@@ -23,6 +23,7 @@ const changeEmailSchema = z.object({
 export default function EmailCard() {
 	const queryClient = useQueryClient();
 	const { data } = useSuspenseSession();
+	const user = data?.user;
 	const { mutate, isPending } = useMutation({
 		...updateUserMutationOptions(),
 		onSuccess: (data) => {
@@ -32,13 +33,13 @@ export default function EmailCard() {
 	});
 	const form = useAppForm({
 		defaultValues: {
-			email: data?.user.email,
+			email: user?.email ?? "",
 		},
 		validators: {
 			onSubmit: changeEmailSchema,
 		},
 		onSubmit: ({ value }) => {
-			if (value.email === data?.user.email) {
+			if (value.email === user?.email) {
 				toast.info("Email is unchanged.");
 				return;
 			}

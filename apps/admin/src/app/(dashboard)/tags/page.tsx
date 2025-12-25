@@ -1,5 +1,12 @@
 "use client";
 
+import {
+	adminCreateTagMutationOptions,
+	adminDeleteTagMutationOptions,
+	adminListTagsQueryOptions,
+	adminUpdateTagMutationOptions,
+	queryKeys,
+} from "@docix/api";
 import type { Tag } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import {
@@ -26,13 +33,6 @@ import { Textarea } from "@docix/ui/components/textarea";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	adminCreateTagMutationOptions,
-	adminDeleteTagMutationOptions,
-	adminListTagsQueryOptions,
-	adminUpdateTagMutationOptions,
-	queryKeys,
-} from "@docix/api";
 
 export default function TagsPage() {
 	const queryClient = useQueryClient();

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+	getBookmarkStatusQueryOptions,
+	getSeriesBySlugQueryOptions,
+	queryKeys,
+	toggleBookmark,
+} from "@docix/api";
 import type { BookmarkStatusResponse, SeriesStatus } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import { Button } from "@docix/ui/components/button";
@@ -21,12 +27,6 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useSession } from "@/hooks/use-session";
-import {
-	getBookmarkStatusQueryOptions,
-	getSeriesBySlugQueryOptions,
-	queryKeys,
-	toggleBookmark,
-} from "@docix/api";
 
 const statusConfig = {
 	ongoing: { label: "Ongoing", variant: "default" },

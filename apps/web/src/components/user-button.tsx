@@ -31,16 +31,18 @@ import { useSession } from "@/hooks/use-session";
 
 export function UserAvatar(props: ComponentProps<typeof Avatar>) {
 	const { data } = useSession();
+	const user = data?.user;
 
 	return (
 		<Avatar {...props}>
 			<AvatarImage
-				src={data?.user.avatar || undefined}
-				alt={data?.user.username?.charAt(0).toUpperCase()}
+				src={user?.avatar || undefined}
+				alt={user?.username?.charAt(0).toUpperCase()}
 			/>
 			<AvatarFallback className="bg-input/30 hover:bg-input/50">
-				{data?.user.username?.charAt(0).toUpperCase() ||
-					data?.user.email.charAt(0).toUpperCase()}
+				{user?.username?.charAt(0).toUpperCase() ||
+					user?.email?.charAt(0).toUpperCase() ||
+					"G"}
 			</AvatarFallback>
 		</Avatar>
 	);
@@ -51,22 +53,30 @@ export default function UserButton() {
 	const { isAdmin } = useIsAdmin();
 
 	const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "http://localhost:3001";
+	const isGuest = data?.is_guest ?? true;
+	const user = data?.user;
 
-	return isPending ? (
-		<Skeleton className="rounded-full size-9" />
-	) : !data?.user ? (
-		<div className="space-x-4">
-			<Button
-				variant="outline"
-				nativeButton={false}
-				render={<Link href="/auth/sign-in">Sign In</Link>}
-			/>
-			<Button
-				nativeButton={false}
-				render={<Link href="/auth/sign-up">Sign Up</Link>}
-			/>
-		</div>
-	) : (
+	if (isPending) {
+		return <Skeleton className="rounded-full size-9" />;
+	}
+
+	if (isGuest || !user) {
+		return (
+			<div className="space-x-4">
+				<Button
+					variant="outline"
+					nativeButton={false}
+					render={<Link href="/auth/sign-in">Sign In</Link>}
+				/>
+				<Button
+					nativeButton={false}
+					render={<Link href="/auth/sign-up">Sign Up</Link>}
+				/>
+			</div>
+		);
+	}
+
+	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger
 				nativeButton={false}
@@ -78,11 +88,9 @@ export default function UserButton() {
 						<UserAvatar />
 
 						<div className="flex flex-col">
-							<span className="font-bold text-foreground">
-								{data?.user.username}
-							</span>
+							<span className="font-bold text-foreground">{user.username}</span>
 							<span className="text-xs text-muted-foreground truncate">
-								{data?.user.email}
+								{user.email}
 							</span>
 						</div>
 					</DropdownMenuLabel>

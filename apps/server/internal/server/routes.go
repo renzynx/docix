@@ -70,6 +70,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		router.With(loginRateLimiter.Middleware()).Post("/sign-in", authHandler.SignIn)
 		router.Post("/sign-out", authHandler.SignOut)
 		router.Post("/verify-email", authHandler.VerifyEmail)
+		router.Post("/guest", authHandler.GuestLogin)
 
 		router.Group(func(r chi.Router) {
 			r.Use(middleware.OptionalAuth(db))

@@ -2,6 +2,7 @@ import "@docix/ui/globals.css";
 import { Toaster } from "@docix/ui/components/sonner";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { AuthProvider } from "@/components/auth-provider";
 import { MaintenancePage } from "@/components/maintenance-page";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getSiteConfig } from "@/lib/api.server";
@@ -76,7 +77,9 @@ export default async function RootLayout({
 					{isMaintenanceMode ? (
 						<MaintenancePage message={maintenanceMessage} siteName={siteName} />
 					) : (
-						<TanstackQueryProvider>{children}</TanstackQueryProvider>
+						<TanstackQueryProvider>
+							<AuthProvider>{children}</AuthProvider>
+						</TanstackQueryProvider>
 					)}
 					<Toaster richColors />
 				</ThemeProvider>

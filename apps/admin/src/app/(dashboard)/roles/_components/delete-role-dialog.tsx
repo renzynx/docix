@@ -1,5 +1,6 @@
 "use client";
 
+import { adminDeleteRoleMutationOptions, queryKeys } from "@docix/api";
 import type { Role } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import {
@@ -13,7 +14,6 @@ import {
 import { Spinner } from "@docix/ui/components/spinner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { adminDeleteRoleMutationOptions, queryKeys } from "@docix/api";
 import { RoleBadge } from "./role-badge";
 
 interface DeleteRoleDialogProps {

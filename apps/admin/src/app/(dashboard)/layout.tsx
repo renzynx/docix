@@ -1,9 +1,9 @@
-import { redirect } from "next/navigation";
-import { AuthProvider } from "@/components/auth-provider";
 import {
 	getCurrentSessionQueryOptions,
 	getUserPermissionsQueryOptions,
 } from "@docix/api";
+import { redirect } from "next/navigation";
+import { AuthProvider } from "@/components/auth-provider";
 import { type AdminSession, hasAdminAccess } from "@/lib/auth";
 import {
 	getQueryClient,
@@ -26,7 +26,7 @@ export default async function DashboardLayout({
 		queryClient.fetchQuery(getUserPermissionsQueryOptions({ headers })),
 	]);
 
-	if (!sessionData || !permissionsData) {
+	if (!sessionData?.user || !permissionsData) {
 		redirect("/auth/sign-in");
 	}
 

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+	adminAssignRoleMutationOptions,
+	adminListRolesQueryOptions,
+	adminRemoveRoleMutationOptions,
+	queryKeys,
+} from "@docix/api";
 import type { User } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import { Button } from "@docix/ui/components/button";
@@ -12,17 +18,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@docix/ui/components/dialog";
-
 import { Spinner } from "@docix/ui/components/spinner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-	adminAssignRoleMutationOptions,
-	adminListRolesQueryOptions,
-	adminRemoveRoleMutationOptions,
-	queryKeys,
-} from "@docix/api";
 
 interface UserRolesDialogProps {
 	user: User | null;

@@ -1,6 +1,6 @@
+import { getChapterQueryOptions } from "@docix/api";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getChapterQueryOptions } from "@docix/api";
 import { getChapter } from "@/lib/api.server";
 import {
 	getQueryClient,

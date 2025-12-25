@@ -1,3 +1,4 @@
+import { adminListTagsQueryOptions } from "@docix/api";
 import { Button } from "@docix/ui/components/button";
 import {
 	Card,
@@ -9,7 +10,6 @@ import {
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { adminListTagsQueryOptions } from "@docix/api";
 import {
 	getQueryClient,
 	getRequestHeaders,

@@ -1,5 +1,10 @@
 "use client";
 
+import {
+	listSessionsQueryOptions,
+	queryKeys,
+	revokeSessionMutationOptions,
+} from "@docix/api";
 import type { SessionListItem } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import { Button } from "@docix/ui/components/button";
@@ -21,11 +26,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import {
-	listSessionsQueryOptions,
-	queryKeys,
-	revokeSessionMutationOptions,
-} from "@docix/api";
 
 function getDeviceIcon(userAgent: string) {
 	const ua = userAgent.toLowerCase();

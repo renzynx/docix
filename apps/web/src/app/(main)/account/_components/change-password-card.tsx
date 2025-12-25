@@ -1,5 +1,6 @@
 "use client";
 
+import { changePasswordMutationOptions } from "@docix/api";
 import {
 	Card,
 	CardContent,
@@ -14,7 +15,6 @@ import { AxiosError } from "axios";
 import { toast } from "sonner";
 import z from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
-import { changePasswordMutationOptions } from "@docix/api";
 
 const changePasswordSchema = z
 	.object({

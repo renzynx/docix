@@ -21,6 +21,7 @@ import (
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
+	IsGuest   bool      `json:"is_guest"`
 	IPAddress string    `json:"ip_address"`
 	UserAgent string    `json:"user_agent"`
 	ExpiresAt time.Time `json:"expires_at"`
@@ -77,7 +78,31 @@ func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) 
 	sess := middleware.GetSessionFromContext(r.Context())
 	user := middleware.GetUserFromContext(r.Context())
 
-	if sess == nil || user == nil {
+	if sess == nil {
+		response.JSON(w, http.StatusOK, nil)
+		return
+	}
+
+	// Handle guest sessions
+	if sess.IsGuest {
+		response.JSON(w, http.StatusOK, map[string]any{
+			"session": models.SessionListItem{
+				ID:        sess.ID,
+				IPAddress: sess.IPAddress,
+				UserAgent: sess.UserAgent,
+				ExpiresAt: sess.ExpiresAt,
+				CreatedAt: sess.CreatedAt,
+				IsCurrent: true,
+			},
+			"user":        nil,
+			"permissions": guestPermissions,
+			"roles":       []string{"guest"},
+			"is_guest":    true,
+		})
+		return
+	}
+
+	if user == nil {
 		response.JSON(w, http.StatusOK, nil)
 		return
 	}
@@ -111,6 +136,7 @@ func (h *AuthHandler) GetCurrentSession(w http.ResponseWriter, r *http.Request) 
 		"user":        user,
 		"permissions": permissions,
 		"roles":       roleNames,
+		"is_guest":    false,
 	})
 }
 
@@ -217,4 +243,97 @@ func (h *AuthHandler) listUserSessions(ctx context.Context, userID string) ([]Se
 	}
 
 	return sessions, nil
+}
+
+const guestSessionPrefix = "guest:"
+
+var guestPermissions = []string{
+	constants.PermManagaRead,
+	constants.PermChapterRead,
+	constants.PermCommentRead,
+}
+
+func (h *AuthHandler) GuestLogin(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(constants.SessionCookieName)
+	if err == nil {
+		claims, err := auth.VerifySessionToken(cookie.Value)
+		if err == nil {
+			sess, _ := h.getSession(r.Context(), claims.SessionID)
+			if sess != nil {
+				response.JSON(w, http.StatusOK, map[string]any{
+					"session": models.SessionListItem{
+						ID:        sess.ID,
+						IPAddress: sess.IPAddress,
+						UserAgent: sess.UserAgent,
+						ExpiresAt: sess.ExpiresAt,
+						CreatedAt: sess.CreatedAt,
+						IsCurrent: true,
+					},
+					"user":        nil,
+					"permissions": guestPermissions,
+					"roles":       []string{"guest"},
+					"is_guest":    true,
+				})
+				return
+			}
+		}
+	}
+
+	sess, jwtToken, err := h.createGuestSession(r)
+	if err != nil {
+		log.Error("Failed to create guest session: ", err)
+		response.Error(w, http.StatusInternalServerError, "Failed to create guest session")
+		return
+	}
+
+	auth.SetSessionCookie(w, jwtToken, sess.ExpiresAt)
+
+	response.JSON(w, http.StatusOK, map[string]any{
+		"session": models.SessionListItem{
+			ID:        sess.ID,
+			IPAddress: sess.IPAddress,
+			UserAgent: sess.UserAgent,
+			ExpiresAt: sess.ExpiresAt,
+			CreatedAt: sess.CreatedAt,
+			IsCurrent: true,
+		},
+		"user":        nil,
+		"permissions": guestPermissions,
+		"roles":       []string{"guest"},
+		"is_guest":    true,
+	})
+}
+
+func (h *AuthHandler) createGuestSession(r *http.Request) (*Session, string, error) {
+	expiresAt := time.Now().Add(30 * 24 * time.Hour)
+	ttl := time.Until(expiresAt)
+
+	guestID := guestSessionPrefix + uuid.New().String()
+
+	sess := &Session{
+		ID:        uuid.New().String(),
+		UserID:    guestID,
+		IsGuest:   true,
+		IPAddress: auth.GetClientIP(r),
+		UserAgent: r.UserAgent(),
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	data, err := json.Marshal(sess)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to marshal session: %w", err)
+	}
+
+	ctx := r.Context()
+	if err := h.Redis.Set(ctx, constants.SessionKeyPrefix+sess.ID, data, ttl).Err(); err != nil {
+		return nil, "", fmt.Errorf("failed to create guest session: %w", err)
+	}
+
+	jwtToken, err := auth.GenerateSessionToken(sess.ID, guestID, expiresAt)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return sess, jwtToken, nil
 }

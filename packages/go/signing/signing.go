@@ -46,8 +46,6 @@ func (s *Signer) GenerateSignedURLWithTTL(filename string, ttl time.Duration) st
 	return s.GenerateSignedURLWithBase(filename, s.baseURL, ttl)
 }
 
-// GenerateSignedURLWithBase creates a signed URL using a custom base URL.
-// Enables dynamic base URL selection (e.g., CDN vs local) while preserving signature validity.
 func (s *Signer) GenerateSignedURLWithBase(filename, baseURL string, ttl time.Duration) string {
 	if ttl == 0 {
 		ttl = s.ttl

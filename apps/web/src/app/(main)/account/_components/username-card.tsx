@@ -1,5 +1,6 @@
 "use client";
 
+import { queryKeys, updateUserMutationOptions } from "@docix/api";
 import {
 	Card,
 	CardContent,
@@ -15,7 +16,6 @@ import { toast } from "sonner";
 import z from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
 import { useSuspenseSession } from "@/hooks/use-session";
-import { queryKeys, updateUserMutationOptions } from "@docix/api";
 
 const changeUsernameSchema = z.object({
 	username: z
@@ -27,6 +27,7 @@ const changeUsernameSchema = z.object({
 export default function UsernameCard() {
 	const queryClient = useQueryClient();
 	const { data } = useSuspenseSession();
+	const user = data?.user;
 	const { mutate, isPending } = useMutation({
 		...updateUserMutationOptions(),
 		onSuccess: (data) => {
@@ -47,13 +48,13 @@ export default function UsernameCard() {
 	});
 	const form = useAppForm({
 		defaultValues: {
-			username: data?.user.username || "",
+			username: user?.username ?? "",
 		},
 		validators: {
 			onSubmit: changeUsernameSchema,
 		},
 		onSubmit: ({ value }) => {
-			if (value.username === data?.user.username) {
+			if (value.username === user?.username) {
 				toast.info("Username is unchanged.");
 				return;
 			}

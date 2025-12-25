@@ -1,5 +1,10 @@
 "use client";
 
+import {
+	adminDeleteSeriesMutationOptions,
+	adminListSeriesQueryOptions,
+	queryKeys,
+} from "@docix/api";
 import type { Series } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import { Button } from "@docix/ui/components/button";
@@ -22,11 +27,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	adminDeleteSeriesMutationOptions,
-	adminListSeriesQueryOptions,
-	queryKeys,
-} from "@docix/api";
 import { DeleteConfirmDialog, getStatusColor } from "./_components";
 
 export default function SeriesPage() {

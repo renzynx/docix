@@ -21,9 +21,10 @@ export interface MessageResponse {
 }
 export interface CurrentSessionResponse {
 	session: SessionListItem;
-	user: User;
+	user?: User;
 	permissions: string[];
 	roles: string[];
+	is_guest: boolean;
 }
 export interface UserPermissionsResponse {
 	permissions: string[];
@@ -321,16 +322,6 @@ export interface SiteConfig {
 	meta_title: string;
 	meta_description: string;
 }
-
-export interface PublicMaintenanceInfo {
-	enabled: boolean;
-	message: string;
-}
-
-export interface PublicSiteConfig extends SiteConfig {
-	maintenance?: PublicMaintenanceInfo;
-}
-
 export interface ContentConfig {
 	max_upload_size_mb: number /* int */;
 	max_chapters_per_day: number /* int */;
@@ -399,6 +390,20 @@ export interface SystemInfo {
 	uptime: string;
 	database_status: string;
 	cache_stats: CacheStats;
+}
+export interface PublicSiteConfig {
+	name: string;
+	description: string;
+	logo_url: string;
+	favicon_url: string;
+	default_locale: string;
+	meta_title: string;
+	meta_description: string;
+	maintenance?: PublicMaintenanceInfo;
+}
+export interface PublicMaintenanceInfo {
+	enabled: boolean;
+	message: string;
 }
 
 //////////

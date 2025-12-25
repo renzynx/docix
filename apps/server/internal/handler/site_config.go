@@ -22,16 +22,6 @@ func NewSiteConfigHandler(settings SiteConfigProvider) *SiteConfigHandler {
 	return &SiteConfigHandler{Settings: settings}
 }
 
-type PublicSiteConfig struct {
-	models.SiteConfig
-	Maintenance *PublicMaintenanceInfo `json:"maintenance,omitempty"`
-}
-
-type PublicMaintenanceInfo struct {
-	Enabled bool   `json:"enabled"`
-	Message string `json:"message"`
-}
-
 func (h *SiteConfigHandler) GetSiteConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -47,12 +37,18 @@ func (h *SiteConfigHandler) GetSiteConfig(w http.ResponseWriter, r *http.Request
 		log.Warn("Failed to get maintenance config: ", err)
 	}
 
-	result := PublicSiteConfig{
-		SiteConfig: *config,
+	result := models.PublicSiteConfig{
+		Name:            config.Name,
+		Description:     config.Description,
+		LogoURL:         config.LogoURL,
+		FaviconURL:      config.FaviconURL,
+		DefaultLocale:   config.DefaultLocale,
+		MetaTitle:       config.MetaTitle,
+		MetaDescription: config.MetaDescription,
 	}
 
 	if maintenanceConfig != nil && maintenanceConfig.Enabled {
-		result.Maintenance = &PublicMaintenanceInfo{
+		result.Maintenance = &models.PublicMaintenanceInfo{
 			Enabled: true,
 			Message: maintenanceConfig.Message,
 		}

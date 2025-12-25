@@ -1,11 +1,11 @@
 "use client";
 
+import { adminListRolesQueryOptions } from "@docix/api";
 import type { Role } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import { Spinner } from "@docix/ui/components/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { adminListRolesQueryOptions } from "@docix/api";
 import { DeleteRoleDialog, RoleFormDialog, RolesTable } from "./_components";
 
 export default function RolesPage() {

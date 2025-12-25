@@ -1,5 +1,6 @@
 "use client";
 
+import { adminListServersQueryOptions } from "@docix/api";
 import type { ServerInfo } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import {
@@ -14,7 +15,6 @@ import { ServerStack01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { adminListServersQueryOptions } from "@docix/api";
 
 export function ServerList() {
 	const { data, isLoading } = useQuery(adminListServersQueryOptions());

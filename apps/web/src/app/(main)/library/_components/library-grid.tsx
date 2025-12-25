@@ -1,5 +1,6 @@
 "use client";
 
+import { api, queryKeys } from "@docix/api";
 import type { Series } from "@docix/types";
 import { Skeleton } from "@docix/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
@@ -7,7 +8,6 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { SeriesCard } from "@/components/series-card";
 import { useSession } from "@/hooks/use-session";
-import { api, queryKeys } from "@docix/api";
 
 interface BookmarkWithSeries {
 	id: string;

@@ -1,5 +1,12 @@
 "use client";
 
+import {
+	adminAddPagesMutationOptions,
+	adminGetChapterQueryOptions,
+	adminGetSeriesQueryOptions,
+	queryKeys,
+	uploadImages,
+} from "@docix/api";
 import type { CreatePagesRequest } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import { Spinner } from "@docix/ui/components/spinner";
@@ -10,13 +17,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	adminAddPagesMutationOptions,
-	adminGetChapterQueryOptions,
-	adminGetSeriesQueryOptions,
-	queryKeys,
-} from "@docix/api";
-import { uploadImages } from "@docix/api";
 import { BulkImageUpload, type PendingPage } from "./_components";
 
 export default function AddPagesPage() {

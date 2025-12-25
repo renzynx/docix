@@ -1,6 +1,12 @@
 "use client";
 
 import {
+	createEmptyImageValue,
+	createImageValueFromFile,
+	type ImageValue,
+	revokeImagePreview,
+} from "@docix/api";
+import {
 	Field,
 	FieldDescription,
 	FieldError,
@@ -23,12 +29,6 @@ import {
 	useState,
 } from "react";
 import { useFieldContext } from "@/contexts/form-context";
-import {
-	createEmptyImageValue,
-	createImageValueFromFile,
-	type ImageValue,
-	revokeImagePreview,
-} from "@docix/api";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB

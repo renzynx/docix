@@ -146,15 +146,15 @@ export function AdminSidebar() {
 						</Link>
 					</SidebarMenuItem>
 					<SidebarMenuItem>
-						<SidebarMenuButton size="lg" tooltip={data?.user.username}>
+						<SidebarMenuButton size="lg" tooltip={data?.user?.username}>
 							<Link href="/account" className="flex items-center gap-2">
 								<UserAvatar className="size-8" />
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-semibold">
-										{data?.user.username}
+										{data?.user?.username}
 									</span>
 									<span className="truncate text-xs text-muted-foreground">
-										{data?.user.email}
+										{data?.user?.email}
 									</span>
 								</div>
 							</Link>

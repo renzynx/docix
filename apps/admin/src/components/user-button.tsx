@@ -32,12 +32,12 @@ export function UserAvatar(props: ComponentProps<typeof Avatar>) {
 	return (
 		<Avatar {...props}>
 			<AvatarImage
-				src={data?.user.avatar || undefined}
-				alt={data?.user.username?.charAt(0).toUpperCase()}
+				src={data?.user?.avatar || undefined}
+				alt={data?.user?.username?.charAt(0).toUpperCase()}
 			/>
 			<AvatarFallback className="bg-input/30 hover:bg-input/50">
-				{data?.user.username?.charAt(0).toUpperCase() ||
-					data?.user.email.charAt(0).toUpperCase()}
+				{data?.user?.username?.charAt(0).toUpperCase() ||
+					data?.user?.email?.charAt(0).toUpperCase()}
 			</AvatarFallback>
 		</Avatar>
 	);

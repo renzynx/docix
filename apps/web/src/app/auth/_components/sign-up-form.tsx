@@ -1,5 +1,6 @@
 "use client";
 
+import { signUpMutationOptions } from "@docix/api";
 import { Button } from "@docix/ui/components/button";
 import {
 	Card,
@@ -17,7 +18,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import z from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
-import { signUpMutationOptions } from "@docix/api";
 
 const signUpSchema = z.object({
 	email: z.email("Invalid email address"),

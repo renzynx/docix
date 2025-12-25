@@ -1,6 +1,6 @@
+import { getCurrentSessionQueryOptions } from "@docix/api";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { getCurrentSessionQueryOptions } from "@docix/api";
 import {
 	getQueryClient,
 	getRequestHeaders,

@@ -1,5 +1,6 @@
 "use client";
 
+import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 import type { IntegrationsConfig } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import {
@@ -15,7 +16,6 @@ import { Switch } from "@docix/ui/components/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 
 interface IntegrationsSettingsProps {
 	settings: IntegrationsConfig;

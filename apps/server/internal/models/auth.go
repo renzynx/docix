@@ -22,9 +22,10 @@ type MessageResponse struct {
 
 type CurrentSessionResponse struct {
 	Session     SessionListItem `json:"session"`
-	User        User            `json:"user"`
+	User        *User           `json:"user"`
 	Permissions []string        `json:"permissions"`
 	Roles       []string        `json:"roles"`
+	IsGuest     bool            `json:"is_guest"`
 }
 
 type UserPermissionsResponse struct {

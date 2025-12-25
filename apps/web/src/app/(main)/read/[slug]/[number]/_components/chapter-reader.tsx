@@ -1,5 +1,6 @@
 "use client";
 
+import { getChapterQueryOptions } from "@docix/api";
 import { Button } from "@docix/ui/components/button";
 import { Image } from "@docix/ui/components/image";
 import {
@@ -10,7 +11,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { getChapterQueryOptions } from "@docix/api";
 import { ReaderAffix } from "./reader-affix";
 
 interface ChapterReaderProps {

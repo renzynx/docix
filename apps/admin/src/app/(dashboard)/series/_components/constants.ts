@@ -1,9 +1,9 @@
-import type { Series, SeriesStatus } from "@docix/types";
 import {
 	createEmptyImageValue,
 	createImageValueFromFilename,
 	type ImageValue,
 } from "@docix/api";
+import type { Series, SeriesStatus } from "@docix/types";
 
 export const SERIES_STATUSES: { value: SeriesStatus; label: string }[] = [
 	{ value: "ongoing", label: "Ongoing" },

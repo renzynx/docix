@@ -1,5 +1,6 @@
 "use client";
 
+import { adminGetDashboardStatsQueryOptions } from "@docix/api";
 import {
 	Card,
 	CardContent,
@@ -32,7 +33,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { adminGetDashboardStatsQueryOptions } from "@docix/api";
 
 export default function DashboardPage() {
 	const { data: stats, isLoading } = useQuery(

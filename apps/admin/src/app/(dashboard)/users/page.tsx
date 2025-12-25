@@ -1,11 +1,11 @@
 "use client";
 
+import { adminListUsersQueryOptions } from "@docix/api";
 import type { User } from "@docix/types";
 import { Input } from "@docix/ui/components/input";
 import { Spinner } from "@docix/ui/components/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { adminListUsersQueryOptions } from "@docix/api";
 import { BanUserDialog, UserRolesDialog, UsersTable } from "./_components";
 
 export default function UsersPage() {

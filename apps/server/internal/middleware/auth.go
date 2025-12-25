@@ -29,6 +29,7 @@ const (
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
+	IsGuest   bool      `json:"is_guest"`
 	IPAddress string    `json:"ip_address"`
 	UserAgent string    `json:"user_agent"`
 	ExpiresAt time.Time `json:"expires_at"`
@@ -62,6 +63,14 @@ func Auth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
+			ctx := context.WithValue(r.Context(), SessionContextKey, sess)
+
+			// Guest sessions don't have a user document
+			if sess.IsGuest {
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
 			userID, err := bson.ObjectIDFromHex(sess.UserID)
 			if err != nil {
 				response.Error(w, http.StatusUnauthorized, "Invalid session")
@@ -80,7 +89,6 @@ func Auth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), SessionContextKey, sess)
 			ctx = context.WithValue(ctx, UserContextKey, &user)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -111,6 +119,14 @@ func OptionalAuth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
+			ctx := context.WithValue(r.Context(), SessionContextKey, sess)
+
+			// Guest sessions don't have a user document
+			if sess.IsGuest {
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
 			userID, err := bson.ObjectIDFromHex(sess.UserID)
 			if err != nil {
 				next.ServeHTTP(w, r)
@@ -129,7 +145,6 @@ func OptionalAuth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), SessionContextKey, sess)
 			ctx = context.WithValue(ctx, UserContextKey, &user)
 
 			next.ServeHTTP(w, r.WithContext(ctx))

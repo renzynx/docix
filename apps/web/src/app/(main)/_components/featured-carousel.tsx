@@ -1,5 +1,6 @@
 "use client";
 
+import { listSeriesQueryOptions } from "@docix/api";
 import type { Series } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import {
@@ -15,7 +16,6 @@ import { useQuery } from "@tanstack/react-query";
 import Autoplay from "embla-carousel-autoplay";
 import Link from "next/link";
 import { useRef } from "react";
-import { listSeriesQueryOptions } from "@docix/api";
 
 export function FeaturedCarousel() {
 	const { data, isPending, isError } = useQuery(

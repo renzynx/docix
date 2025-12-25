@@ -1,5 +1,10 @@
 "use client";
 
+import {
+	adminBanUserMutationOptions,
+	adminUnbanUserMutationOptions,
+	queryKeys,
+} from "@docix/api";
 import type { User } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import {
@@ -16,11 +21,6 @@ import { Textarea } from "@docix/ui/components/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	adminBanUserMutationOptions,
-	adminUnbanUserMutationOptions,
-	queryKeys,
-} from "@docix/api";
 
 interface BanUserDialogProps {
 	user: User | null;

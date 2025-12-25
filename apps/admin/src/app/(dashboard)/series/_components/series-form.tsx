@@ -1,5 +1,6 @@
 "use client";
 
+import { type ImageValue, uploadImageValue } from "@docix/api";
 import type { SeriesStatus, Tag } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import { Field, FieldLabel } from "@docix/ui/components/field";
@@ -7,7 +8,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
-import { type ImageValue, uploadImageValue } from "@docix/api";
 import {
 	defaultSeriesFormValues,
 	SERIES_STATUSES,

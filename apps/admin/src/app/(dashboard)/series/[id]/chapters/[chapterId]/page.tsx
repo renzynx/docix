@@ -1,5 +1,12 @@
 "use client";
 
+import {
+	adminDeletePageMutationOptions,
+	adminGetChapterQueryOptions,
+	adminGetSeriesQueryOptions,
+	adminReorderPagesMutationOptions,
+	queryKeys,
+} from "@docix/api";
 import type { Page } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import {
@@ -18,13 +25,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	adminDeletePageMutationOptions,
-	adminGetChapterQueryOptions,
-	adminGetSeriesQueryOptions,
-	adminReorderPagesMutationOptions,
-	queryKeys,
-} from "@docix/api";
 import { PageGrid } from "./_components";
 
 export default function ChapterPagesPage() {

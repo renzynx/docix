@@ -91,6 +91,15 @@ export const signOut = async (config?: AxiosRequestConfig) => {
 	return data;
 };
 
+export const guestLogin = async (config?: AxiosRequestConfig) => {
+	const { data } = await api.post<CurrentSessionResponse>(
+		"/auth/guest",
+		undefined,
+		config,
+	);
+	return data;
+};
+
 export const verifyEmail = async (
 	request: VerifyEmailRequest,
 	config?: AxiosRequestConfig,
@@ -162,6 +171,11 @@ export const signInMutationOptions = (config?: AxiosRequestConfig) =>
 export const signOutMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: () => signOut(config),
+	});
+
+export const guestLoginMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: () => guestLogin(config),
 	});
 
 export const verifyEmailMutationOptions = (config?: AxiosRequestConfig) =>

@@ -1,11 +1,11 @@
 "use client";
 
+import { type ListSeriesParams, listSeriesQueryOptions } from "@docix/api";
 import { ArrowRight02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { SeriesGrid, SeriesGridSkeleton } from "@/components/series-grid";
-import { type ListSeriesParams, listSeriesQueryOptions } from "@docix/api";
 
 interface SeriesSectionProps {
 	title: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { adminGetSiteSettingsQueryOptions } from "@docix/api";
 import { Spinner } from "@docix/ui/components/spinner";
 import {
 	Tabs,
@@ -8,7 +9,6 @@ import {
 	TabsTrigger,
 } from "@docix/ui/components/tabs";
 import { useQuery } from "@tanstack/react-query";
-import { adminGetSiteSettingsQueryOptions } from "@docix/api";
 import {
 	ContentSettings,
 	IntegrationsSettings,

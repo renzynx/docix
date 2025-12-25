@@ -1,14 +1,14 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import {
 	adminGetSeriesQueryOptions,
 	adminListTagsQueryOptions,
 	adminUpdateSeriesMutationOptions,
 	queryKeys,
 } from "@docix/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
 	SeriesForm,
 	type SeriesFormData,

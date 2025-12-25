@@ -105,3 +105,19 @@ type SystemInfo struct {
 	DatabaseStatus string     `json:"database_status"`
 	CacheStats     CacheStats `json:"cache_stats"`
 }
+
+type PublicSiteConfig struct {
+	Name            string                 `json:"name"`
+	Description     string                 `json:"description"`
+	LogoURL         string                 `json:"logo_url"`
+	FaviconURL      string                 `json:"favicon_url"`
+	DefaultLocale   string                 `json:"default_locale"`
+	MetaTitle       string                 `json:"meta_title"`
+	MetaDescription string                 `json:"meta_description"`
+	Maintenance     *PublicMaintenanceInfo `json:"maintenance,omitempty"`
+}
+
+type PublicMaintenanceInfo struct {
+	Enabled bool   `json:"enabled"`
+	Message string `json:"message"`
+}
