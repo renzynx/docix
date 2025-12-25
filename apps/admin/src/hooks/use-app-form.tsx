@@ -1,15 +1,16 @@
 "use client";
 
-import { createFormHook } from "@tanstack/react-form";
+import { fieldContext, formContext } from "@docix/ui/hooks/form-context";
 import {
 	NumberField,
 	SelectField,
 	SubscribeButton,
+	SwitchField,
 	TextArea,
 	TextField,
-} from "@/components/form";
+} from "@docix/ui/hooks/form-fields";
+import { createFormHook } from "@tanstack/react-form";
 import { ImageUploadField } from "@/components/image-upload-field";
-import { fieldContext, formContext } from "@/contexts/form-context";
 
 export const { useAppForm } = createFormHook({
 	fieldContext,
@@ -19,6 +20,7 @@ export const { useAppForm } = createFormHook({
 		TextArea,
 		SelectField,
 		NumberField,
+		SwitchField,
 		ImageUploadField,
 	},
 	formComponents: {

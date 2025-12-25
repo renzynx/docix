@@ -8,7 +8,13 @@
 		"./postcss.config": "./postcss.config.mjs",
 		"./lib/*": "./src/lib/*.ts",
 		"./components/*": "./src/components/*.tsx",
-		"./hooks/*": "./src/hooks/*.ts"
+		"./hooks/*": [
+			"./src/hooks/*.ts",
+			"./src/hooks/*.tsx"
+		],
+		"./hooks/form-fields": "./src/hooks/form-fields.tsx",
+		"./hooks/use-app-form": "./src/hooks/use-app-form.ts",
+		"./hooks/form-context": "./src/hooks/form-context.ts"
 	},
 	"scripts": {
 		"lint": "biome lint .",
@@ -18,6 +24,7 @@
 		"@base-ui/react": "catalog:",
 		"@hugeicons/core-free-icons": "catalog:",
 		"@hugeicons/react": "catalog:",
+		"@tanstack/react-form": "catalog:",
 		"class-variance-authority": "catalog:",
 		"clsx": "catalog:",
 		"embla-carousel-autoplay": "catalog:",
@@ -27,7 +34,8 @@
 		"sonner": "catalog:",
 		"tailwind-merge": "catalog:",
 		"tailwindcss": "catalog:",
-		"tw-animate-css": "catalog:"
+		"tw-animate-css": "catalog:",
+		"zod": "catalog:"
 	},
 	"peerDependencies": {
 		"next": ">=16.0.0",

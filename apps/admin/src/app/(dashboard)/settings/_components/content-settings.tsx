@@ -2,7 +2,6 @@
 
 import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 import type { ContentConfig } from "@docix/types";
-import { Button } from "@docix/ui/components/button";
 import {
 	Card,
 	CardContent,
@@ -10,12 +9,19 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@docix/ui/components/card";
-import { Input } from "@docix/ui/components/input";
-import { Label } from "@docix/ui/components/label";
-import { Switch } from "@docix/ui/components/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useAppForm } from "@/hooks/use-app-form";
+
+const contentSettingsSchema = z.object({
+	max_upload_size_mb: z.number().min(1),
+	max_chapters_per_day: z.number().min(1),
+	allowed_image_types: z.string(),
+	default_content_rating: z.string(),
+	enable_comments: z.boolean(),
+	require_moderation: z.boolean(),
+});
 
 interface ContentSettingsProps {
 	settings: ContentConfig;
@@ -23,10 +29,10 @@ interface ContentSettingsProps {
 
 export function ContentSettings({ settings }: ContentSettingsProps) {
 	const queryClient = useQueryClient();
-	const [form, setForm] = useState<ContentConfig>(settings);
 
 	const mutation = useMutation({
-		mutationFn: () => adminUpdateSiteSettings({ content: form }),
+		mutationFn: (values: ContentConfig) =>
+			adminUpdateSiteSettings({ content: values }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: queryKeys.adminSiteSettings });
 			toast.success("Content settings updated");
@@ -36,10 +42,13 @@ export function ContentSettings({ settings }: ContentSettingsProps) {
 		},
 	});
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		mutation.mutate();
-	};
+	const form = useAppForm({
+		defaultValues: settings,
+		validators: {
+			onSubmit: contentSettingsSchema,
+		},
+		onSubmit: ({ value }) => mutation.mutate(value),
+	});
 
 	return (
 		<Card>
@@ -50,104 +59,72 @@ export function ContentSettings({ settings }: ContentSettingsProps) {
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<form onSubmit={handleSubmit} className="space-y-6">
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						form.handleSubmit();
+					}}
+					className="space-y-6"
+				>
 					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-2">
-							<Label htmlFor="maxUpload">Max Upload Size (MB)</Label>
-							<Input
-								id="maxUpload"
-								type="number"
-								min={1}
-								value={form.max_upload_size_mb}
-								onChange={(e) =>
-									setForm({
-										...form,
-										max_upload_size_mb:
-											Number.parseInt(e.target.value, 10) || 1,
-									})
-								}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="maxChapters">Max Chapters Per Day</Label>
-							<Input
-								id="maxChapters"
-								type="number"
-								min={1}
-								value={form.max_chapters_per_day}
-								onChange={(e) =>
-									setForm({
-										...form,
-										max_chapters_per_day:
-											Number.parseInt(e.target.value, 10) || 1,
-									})
-								}
-							/>
-						</div>
+						<form.AppField name="max_upload_size_mb">
+							{(field) => (
+								<field.NumberField
+									label="Max Upload Size (MB)"
+									min={1}
+									required
+								/>
+							)}
+						</form.AppField>
+						<form.AppField name="max_chapters_per_day">
+							{(field) => (
+								<field.NumberField
+									label="Max Chapters Per Day"
+									min={1}
+									required
+								/>
+							)}
+						</form.AppField>
 					</div>
 
 					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-2">
-							<Label htmlFor="imageTypes">Allowed Image Types</Label>
-							<Input
-								id="imageTypes"
-								value={form.allowed_image_types}
-								onChange={(e) =>
-									setForm({ ...form, allowed_image_types: e.target.value })
-								}
-								placeholder="jpg,jpeg,png,webp,gif"
-							/>
-							<p className="text-xs text-muted-foreground">
-								Comma-separated list of extensions
-							</p>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="rating">Default Content Rating</Label>
-							<Input
-								id="rating"
-								value={form.default_content_rating}
-								onChange={(e) =>
-									setForm({ ...form, default_content_rating: e.target.value })
-								}
-							/>
-						</div>
+						<form.AppField name="allowed_image_types">
+							{(field) => (
+								<field.TextField
+									label="Allowed Image Types"
+									placeholder="jpg,jpeg,png,webp,gif"
+									description="Comma-separated list of extensions"
+								/>
+							)}
+						</form.AppField>
+						<form.AppField name="default_content_rating">
+							{(field) => <field.TextField label="Default Content Rating" />}
+						</form.AppField>
 					</div>
 
 					<div className="space-y-4">
-						<div className="flex items-center justify-between">
-							<div className="space-y-0.5">
-								<Label>Enable Comments</Label>
-								<p className="text-sm text-muted-foreground">
-									Allow users to comment on series and chapters
-								</p>
-							</div>
-							<Switch
-								checked={form.enable_comments}
-								onCheckedChange={(checked) =>
-									setForm({ ...form, enable_comments: checked })
-								}
-							/>
-						</div>
+						<form.AppField name="enable_comments">
+							{(field) => (
+								<field.SwitchField
+									label="Enable Comments"
+									description="Allow users to comment on series and chapters"
+								/>
+							)}
+						</form.AppField>
 
-						<div className="flex items-center justify-between">
-							<div className="space-y-0.5">
-								<Label>Require Moderation</Label>
-								<p className="text-sm text-muted-foreground">
-									New content requires approval before publishing
-								</p>
-							</div>
-							<Switch
-								checked={form.require_moderation}
-								onCheckedChange={(checked) =>
-									setForm({ ...form, require_moderation: checked })
-								}
-							/>
-						</div>
+						<form.AppField name="require_moderation">
+							{(field) => (
+								<field.SwitchField
+									label="Require Moderation"
+									description="New content requires approval before publishing"
+								/>
+							)}
+						</form.AppField>
 					</div>
 
-					<Button type="submit" disabled={mutation.isPending}>
-						{mutation.isPending ? "Saving..." : "Save Changes"}
-					</Button>
+					<form.AppForm>
+						<form.SubscribeButton label="Save Changes" />
+					</form.AppForm>
 				</form>
 			</CardContent>
 		</Card>

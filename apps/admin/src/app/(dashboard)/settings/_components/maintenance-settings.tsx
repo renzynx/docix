@@ -15,13 +15,17 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@docix/ui/components/card";
-import { Input } from "@docix/ui/components/input";
 import { Label } from "@docix/ui/components/label";
-import { Switch } from "@docix/ui/components/switch";
-import { Textarea } from "@docix/ui/components/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useAppForm } from "@/hooks/use-app-form";
+
+const maintenanceSchema = z.object({
+	enabled: z.boolean(),
+	message: z.string(),
+	allowed_ips: z.string(),
+});
 
 interface MaintenanceSettingsProps {
 	settings: MaintenanceConfig;
@@ -29,10 +33,10 @@ interface MaintenanceSettingsProps {
 
 export function MaintenanceSettings({ settings }: MaintenanceSettingsProps) {
 	const queryClient = useQueryClient();
-	const [form, setForm] = useState<MaintenanceConfig>(settings);
 
 	const updateMutation = useMutation({
-		mutationFn: () => adminUpdateSiteSettings({ maintenance: form }),
+		mutationFn: (values: MaintenanceConfig) =>
+			adminUpdateSiteSettings({ maintenance: values }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: queryKeys.adminSiteSettings });
 			toast.success("Maintenance settings updated");
@@ -66,10 +70,13 @@ export function MaintenanceSettings({ settings }: MaintenanceSettingsProps) {
 		},
 	});
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		updateMutation.mutate();
-	};
+	const form = useAppForm({
+		defaultValues: settings,
+		validators: {
+			onSubmit: maintenanceSchema,
+		},
+		onSubmit: ({ value }) => updateMutation.mutate(value),
+	});
 
 	return (
 		<Card>
@@ -80,53 +87,42 @@ export function MaintenanceSettings({ settings }: MaintenanceSettingsProps) {
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-6">
-				<form onSubmit={handleSubmit} className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div className="space-y-0.5">
-							<Label>Maintenance Mode</Label>
-							<p className="text-sm text-muted-foreground">
-								When enabled, users will see the maintenance message
-							</p>
-						</div>
-						<Switch
-							checked={form.enabled}
-							onCheckedChange={(checked) =>
-								setForm({ ...form, enabled: checked })
-							}
-						/>
-					</div>
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						form.handleSubmit();
+					}}
+					className="space-y-4"
+				>
+					<form.AppField name="enabled">
+						{(field) => (
+							<field.SwitchField
+								label="Maintenance Mode"
+								description="When enabled, users will see the maintenance message"
+							/>
+						)}
+					</form.AppField>
 
-					<div className="space-y-2">
-						<Label htmlFor="message">Maintenance Message</Label>
-						<Textarea
-							id="message"
-							value={form.message}
-							onChange={(e) => setForm({ ...form, message: e.target.value })}
-							rows={3}
-						/>
-					</div>
+					<form.AppField name="message">
+						{(field) => <field.TextArea label="Maintenance Message" rows={3} />}
+					</form.AppField>
 
-					<div className="space-y-2">
-						<Label htmlFor="allowedIps">Allowed IPs</Label>
-						<Input
-							id="allowedIps"
-							value={form.allowed_ips}
-							onChange={(e) =>
-								setForm({ ...form, allowed_ips: e.target.value })
-							}
-							placeholder="127.0.0.1, 192.168.1.1"
-						/>
-						<p className="text-xs text-muted-foreground">
-							Comma-separated IPs that can bypass maintenance mode
-						</p>
-					</div>
+					<form.AppField name="allowed_ips">
+						{(field) => (
+							<field.TextField
+								label="Allowed IPs"
+								placeholder="127.0.0.1, 192.168.1.1"
+								description="Comma-separated IPs that can bypass maintenance mode"
+							/>
+						)}
+					</form.AppField>
 
-					<Button type="submit" disabled={updateMutation.isPending}>
-						{updateMutation.isPending ? "Saving..." : "Save Changes"}
-					</Button>
+					<form.AppForm>
+						<form.SubscribeButton label="Save Changes" />
+					</form.AppForm>
 				</form>
 
-				{/* Quick Actions */}
+				{/* Quick Actions - outside form */}
 				<div className="space-y-3 border-t pt-4">
 					<Label className="text-base font-medium">Quick Actions</Label>
 					<div className="flex flex-wrap gap-2">

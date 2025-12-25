@@ -2,7 +2,6 @@
 
 import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 import type { UserConfig } from "@docix/types";
-import { Button } from "@docix/ui/components/button";
 import {
 	Card,
 	CardContent,
@@ -10,12 +9,18 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@docix/ui/components/card";
-import { Input } from "@docix/ui/components/input";
-import { Label } from "@docix/ui/components/label";
-import { Switch } from "@docix/ui/components/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useAppForm } from "@/hooks/use-app-form";
+
+const userSettingsSchema = z.object({
+	registration_open: z.boolean(),
+	require_email_verification: z.boolean(),
+	allow_username_change: z.boolean(),
+	max_login_attempts: z.number().min(1).max(20),
+	default_role_id: z.string(),
+});
 
 interface UserSettingsProps {
 	settings: UserConfig;
@@ -23,10 +28,10 @@ interface UserSettingsProps {
 
 export function UserSettings({ settings }: UserSettingsProps) {
 	const queryClient = useQueryClient();
-	const [form, setForm] = useState<UserConfig>(settings);
 
 	const mutation = useMutation({
-		mutationFn: () => adminUpdateSiteSettings({ users: form }),
+		mutationFn: (values: UserConfig) =>
+			adminUpdateSiteSettings({ users: values }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: queryKeys.adminSiteSettings });
 			toast.success("User settings updated");
@@ -36,10 +41,13 @@ export function UserSettings({ settings }: UserSettingsProps) {
 		},
 	});
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		mutation.mutate();
-	};
+	const form = useAppForm({
+		defaultValues: settings,
+		validators: {
+			onSubmit: userSettingsSchema,
+		},
+		onSubmit: ({ value }) => mutation.mutate(value),
+	});
 
 	return (
 		<Card>
@@ -50,92 +58,66 @@ export function UserSettings({ settings }: UserSettingsProps) {
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<form onSubmit={handleSubmit} className="space-y-6">
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						form.handleSubmit();
+					}}
+					className="space-y-6"
+				>
 					<div className="space-y-4">
-						<div className="flex items-center justify-between">
-							<div className="space-y-0.5">
-								<Label>Registration Open</Label>
-								<p className="text-sm text-muted-foreground">
-									Allow new users to register
-								</p>
-							</div>
-							<Switch
-								checked={form.registration_open}
-								onCheckedChange={(checked) =>
-									setForm({ ...form, registration_open: checked })
-								}
-							/>
-						</div>
+						<form.AppField name="registration_open">
+							{(field) => (
+								<field.SwitchField
+									label="Registration Open"
+									description="Allow new users to register"
+								/>
+							)}
+						</form.AppField>
 
-						<div className="flex items-center justify-between">
-							<div className="space-y-0.5">
-								<Label>Require Email Verification</Label>
-								<p className="text-sm text-muted-foreground">
-									Users must verify their email before accessing all features
-								</p>
-							</div>
-							<Switch
-								checked={form.require_email_verification}
-								onCheckedChange={(checked) =>
-									setForm({ ...form, require_email_verification: checked })
-								}
-							/>
-						</div>
+						<form.AppField name="require_email_verification">
+							{(field) => (
+								<field.SwitchField
+									label="Require Email Verification"
+									description="Users must verify their email before accessing all features"
+								/>
+							)}
+						</form.AppField>
 
-						<div className="flex items-center justify-between">
-							<div className="space-y-0.5">
-								<Label>Allow Username Change</Label>
-								<p className="text-sm text-muted-foreground">
-									Users can change their username after registration
-								</p>
-							</div>
-							<Switch
-								checked={form.allow_username_change}
-								onCheckedChange={(checked) =>
-									setForm({ ...form, allow_username_change: checked })
-								}
-							/>
-						</div>
+						<form.AppField name="allow_username_change">
+							{(field) => (
+								<field.SwitchField
+									label="Allow Username Change"
+									description="Users can change their username after registration"
+								/>
+							)}
+						</form.AppField>
 					</div>
 
-					<div className="space-y-2">
-						<Label htmlFor="maxAttempts">Max Login Attempts</Label>
-						<Input
-							id="maxAttempts"
-							type="number"
-							min={1}
-							max={20}
-							value={form.max_login_attempts}
-							onChange={(e) =>
-								setForm({
-									...form,
-									max_login_attempts: Number.parseInt(e.target.value, 10) || 5,
-								})
-							}
-						/>
-						<p className="text-xs text-muted-foreground">
-							Before temporary lockout
-						</p>
-					</div>
+					<form.AppField name="max_login_attempts">
+						{(field) => (
+							<field.NumberField
+								label="Max Login Attempts"
+								min={1}
+								max={20}
+								description="Before temporary lockout"
+							/>
+						)}
+					</form.AppField>
 
-					<div className="space-y-2">
-						<Label htmlFor="defaultRole">Default Role ID</Label>
-						<Input
-							id="defaultRole"
-							value={form.default_role_id}
-							onChange={(e) =>
-								setForm({ ...form, default_role_id: e.target.value })
-							}
-							placeholder="Leave empty for no default role"
-						/>
-						<p className="text-xs text-muted-foreground">
-							Role automatically assigned to new users
-						</p>
-					</div>
+					<form.AppField name="default_role_id">
+						{(field) => (
+							<field.TextField
+								label="Default Role ID"
+								placeholder="Leave empty for no default role"
+								description="Role automatically assigned to new users"
+							/>
+						)}
+					</form.AppField>
 
-					<Button type="submit" disabled={mutation.isPending}>
-						{mutation.isPending ? "Saving..." : "Save Changes"}
-					</Button>
+					<form.AppForm>
+						<form.SubscribeButton label="Save Changes" />
+					</form.AppForm>
 				</form>
 			</CardContent>
 		</Card>
