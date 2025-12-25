@@ -11,6 +11,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useChapterView } from "@/hooks/use-view-tracking";
 import { ReaderAffix } from "./reader-affix";
 
 interface ChapterReaderProps {
@@ -30,6 +31,9 @@ export function ChapterReader({ slug, number }: ChapterReaderProps) {
 		prev_chapter,
 		next_chapter,
 	} = data;
+
+	// Track view with client-side deduplication
+	useChapterView(chapter.id);
 
 	const chapterTitle = chapter.title
 		? `Ch. ${chapter.number}: ${chapter.title}`
