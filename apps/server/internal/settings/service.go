@@ -29,7 +29,6 @@ type Service struct {
 	localCache *models.SiteSettings
 }
 
-// NewService creates a new settings service
 func NewService(db *database.Database) *Service {
 	redisClient, err := redispkg.GetClient()
 	if err != nil {
@@ -155,7 +154,6 @@ func (s *Service) InvalidateCache(ctx context.Context) error {
 	return nil
 }
 
-// GetSiteConfig returns just the site configuration
 func (s *Service) GetSiteConfig(ctx context.Context) (*models.SiteConfig, error) {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -164,7 +162,6 @@ func (s *Service) GetSiteConfig(ctx context.Context) (*models.SiteConfig, error)
 	return &settings.Site, nil
 }
 
-// GetContentConfig returns just the content configuration
 func (s *Service) GetContentConfig(ctx context.Context) (*models.ContentConfig, error) {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -173,7 +170,6 @@ func (s *Service) GetContentConfig(ctx context.Context) (*models.ContentConfig, 
 	return &settings.Content, nil
 }
 
-// GetUserConfig returns just the user configuration
 func (s *Service) GetUserConfig(ctx context.Context) (*models.UserConfig, error) {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -182,7 +178,6 @@ func (s *Service) GetUserConfig(ctx context.Context) (*models.UserConfig, error)
 	return &settings.Users, nil
 }
 
-// GetIntegrationsConfig returns just the integrations configuration
 func (s *Service) GetIntegrationsConfig(ctx context.Context) (*models.IntegrationsConfig, error) {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -191,7 +186,6 @@ func (s *Service) GetIntegrationsConfig(ctx context.Context) (*models.Integratio
 	return &settings.Integrations, nil
 }
 
-// GetMaintenanceConfig returns just the maintenance configuration
 func (s *Service) GetMaintenanceConfig(ctx context.Context) (*models.MaintenanceConfig, error) {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -200,7 +194,6 @@ func (s *Service) GetMaintenanceConfig(ctx context.Context) (*models.Maintenance
 	return &settings.Maintenance, nil
 }
 
-// IsMaintenanceMode checks if maintenance mode is enabled
 // Returns enabled status, message, and allowed IPs (comma-separated string)
 func (s *Service) IsMaintenanceMode(ctx context.Context) (bool, string, string) {
 	settings, err := s.Get(ctx)
@@ -211,7 +204,6 @@ func (s *Service) IsMaintenanceMode(ctx context.Context) (bool, string, string) 
 	return settings.Maintenance.Enabled, settings.Maintenance.Message, settings.Maintenance.AllowedIPs
 }
 
-// IsRegistrationOpen checks if registration is open
 func (s *Service) IsRegistrationOpen(ctx context.Context) bool {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -221,7 +213,6 @@ func (s *Service) IsRegistrationOpen(ctx context.Context) bool {
 	return settings.Users.RegistrationOpen
 }
 
-// RequiresEmailVerification checks if email verification is required
 func (s *Service) RequiresEmailVerification(ctx context.Context) bool {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -231,7 +222,6 @@ func (s *Service) RequiresEmailVerification(ctx context.Context) bool {
 	return settings.Users.RequireEmailVerification
 }
 
-// GetMaxUploadSizeMB returns the maximum upload size in MB
 func (s *Service) GetMaxUploadSizeMB(ctx context.Context) int {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -241,7 +231,6 @@ func (s *Service) GetMaxUploadSizeMB(ctx context.Context) int {
 	return settings.Content.MaxUploadSizeMB
 }
 
-// GetAllowedImageTypes returns comma-separated list of allowed image types
 func (s *Service) GetAllowedImageTypes(ctx context.Context) string {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -251,7 +240,6 @@ func (s *Service) GetAllowedImageTypes(ctx context.Context) string {
 	return settings.Content.AllowedImageTypes
 }
 
-// IsCDNEnabled checks if CDN is enabled for serving images
 func (s *Service) IsCDNEnabled(ctx context.Context) bool {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -261,7 +249,6 @@ func (s *Service) IsCDNEnabled(ctx context.Context) bool {
 	return settings.Integrations.CDNEnabled
 }
 
-// GetCDNBaseURL returns the CDN base URL for serving images
 func (s *Service) GetCDNBaseURL(ctx context.Context) string {
 	settings, err := s.Get(ctx)
 	if err != nil {
@@ -271,7 +258,6 @@ func (s *Service) GetCDNBaseURL(ctx context.Context) string {
 	return settings.Integrations.CDNBaseURL
 }
 
-// getOrCreateFromDB retrieves settings from MongoDB or creates defaults
 func (s *Service) getOrCreateFromDB(ctx context.Context) (*models.SiteSettings, error) {
 	var settings models.SiteSettings
 
@@ -294,7 +280,6 @@ func (s *Service) getOrCreateFromDB(ctx context.Context) (*models.SiteSettings, 
 	return &settings, nil
 }
 
-// defaultSettings returns the default site settings
 func (s *Service) defaultSettings() models.SiteSettings {
 	return models.SiteSettings{
 		Site: models.SiteConfig{
@@ -333,7 +318,6 @@ func (s *Service) defaultSettings() models.SiteSettings {
 	}
 }
 
-// getFromRedis retrieves settings from Redis cache
 func (s *Service) getFromRedis(ctx context.Context) (*models.SiteSettings, error) {
 	data, err := s.redis.Get(ctx, RedisKey).Bytes()
 	if err != nil {
