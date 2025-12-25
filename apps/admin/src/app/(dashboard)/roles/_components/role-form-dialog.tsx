@@ -18,10 +18,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-	createRoleMutationOptions,
-	getPermissionsQueryOptions,
+	adminCreateRoleMutationOptions,
+	adminGetPermissionsQueryOptions,
+	adminUpdateRoleMutationOptions,
 	queryKeys,
-	updateRoleMutationOptions,
 } from "@/lib/api.generated";
 import { PermissionSelector } from "./permission-selector";
 
@@ -49,7 +49,7 @@ export function RoleFormDialog({
 
 	// Fetch all available permissions
 	const { data: allPermissions = [], isLoading: permissionsLoading } = useQuery(
-		getPermissionsQueryOptions(),
+		adminGetPermissionsQueryOptions(),
 	);
 
 	// Reset form when role changes
@@ -72,9 +72,9 @@ export function RoleFormDialog({
 	}, [role]);
 
 	const createMutation = useMutation({
-		...createRoleMutationOptions(),
+		...adminCreateRoleMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.roles });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminRoles });
 			onOpenChange(false);
 			toast.success("Role created successfully");
 		},
@@ -84,9 +84,9 @@ export function RoleFormDialog({
 	});
 
 	const updateMutation = useMutation({
-		...updateRoleMutationOptions(),
+		...adminUpdateRoleMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.roles });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminRoles });
 			onOpenChange(false);
 			toast.success("Role updated successfully");
 		},

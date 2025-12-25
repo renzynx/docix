@@ -292,13 +292,13 @@ type AsyncBulkUploadResponse struct {
 
 // UploadStatusResponse is returned when checking upload status
 type UploadStatusResponse struct {
-	UploadID  string `json:"upload_id"`
-	Status    string `json:"status"`
-	Filename  string `json:"filename,omitempty"`
-	Error     string `json:"error,omitempty"`
-	Width     int    `json:"width,omitempty"`
-	Height    int    `json:"height,omitempty"`
-	Size      int64  `json:"size,omitempty"`
+	UploadID string `json:"upload_id"`
+	Status   string `json:"status"`
+	Filename string `json:"filename,omitempty"`
+	Error    string `json:"error,omitempty"`
+	Width    int    `json:"width,omitempty"`
+	Height   int    `json:"height,omitempty"`
+	Size     int64  `json:"size,omitempty"`
 }
 
 type BulkUploadResponse struct {
@@ -325,4 +325,24 @@ type ChapterReader struct {
 	Pages         []Page      `json:"pages"`
 	PrevChapter   *ChapterNav `json:"prev_chapter,omitempty"`
 	NextChapter   *ChapterNav `json:"next_chapter,omitempty"`
+}
+
+// DashboardStats provides aggregate statistics for the admin dashboard
+type DashboardStats struct {
+	// Core counts
+	TotalUsers    int64 `json:"total_users"`
+	TotalSeries   int64 `json:"total_series"`
+	TotalChapters int64 `json:"total_chapters"`
+	TotalViews    int64 `json:"total_views"`
+
+	// User breakdown
+	VerifiedUsers int64 `json:"verified_users"`
+	BannedUsers   int64 `json:"banned_users"`
+
+	// Series by status for pie chart
+	SeriesByStatus map[string]int64 `json:"series_by_status"`
+
+	// Recent activity
+	RecentSeries []Series `json:"recent_series"`
+	RecentUsers  []User   `json:"recent_users"`
 }

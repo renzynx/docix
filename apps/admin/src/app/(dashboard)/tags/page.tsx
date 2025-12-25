@@ -27,11 +27,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-	createTagMutationOptions,
-	deleteTagMutationOptions,
-	listTagsQueryOptions,
+	adminCreateTagMutationOptions,
+	adminDeleteTagMutationOptions,
+	adminListTagsQueryOptions,
+	adminUpdateTagMutationOptions,
 	queryKeys,
-	updateTagMutationOptions,
 } from "@/lib/api.generated";
 
 export default function TagsPage() {
@@ -40,12 +40,12 @@ export default function TagsPage() {
 	const [editingTag, setEditingTag] = useState<Tag | null>(null);
 	const [deleteConfirm, setDeleteConfirm] = useState<Tag | null>(null);
 
-	const { data: tags, isLoading } = useQuery(listTagsQueryOptions());
+	const { data: tags, isLoading } = useQuery(adminListTagsQueryOptions());
 
 	const createMutation = useMutation({
-		...createTagMutationOptions(),
+		...adminCreateTagMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.tags });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminTags });
 			setIsCreateOpen(false);
 			toast.success("Tag created successfully");
 		},
@@ -55,9 +55,9 @@ export default function TagsPage() {
 	});
 
 	const updateMutation = useMutation({
-		...updateTagMutationOptions(),
+		...adminUpdateTagMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.tags });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminTags });
 			setEditingTag(null);
 			toast.success("Tag updated successfully");
 		},
@@ -67,9 +67,9 @@ export default function TagsPage() {
 	});
 
 	const deleteMutation = useMutation({
-		...deleteTagMutationOptions(),
+		...adminDeleteTagMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.tags });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminTags });
 			setDeleteConfirm(null);
 			toast.success("Tag deleted successfully");
 		},

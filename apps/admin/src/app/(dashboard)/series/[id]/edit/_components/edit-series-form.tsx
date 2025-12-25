@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-	getSeriesQueryOptions,
-	listTagsQueryOptions,
+	adminGetSeriesQueryOptions,
+	adminListTagsQueryOptions,
+	adminUpdateSeriesMutationOptions,
 	queryKeys,
-	updateSeriesMutationOptions,
 } from "@/lib/api.generated";
 import {
 	SeriesForm,
@@ -24,16 +24,16 @@ export function EditSeriesForm({ seriesId }: EditSeriesFormProps) {
 	const queryClient = useQueryClient();
 
 	// Series and tags are prefetched on server, this reads from cache
-	const { data: series } = useQuery(getSeriesQueryOptions(seriesId));
-	const { data: tags = [] } = useQuery(listTagsQueryOptions());
+	const { data: series } = useQuery(adminGetSeriesQueryOptions(seriesId));
+	const { data: tags = [] } = useQuery(adminListTagsQueryOptions());
 
 	const updateMutation = useMutation({
-		...updateSeriesMutationOptions(),
+		...adminUpdateSeriesMutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: queryKeys.seriesDetail(seriesId),
+				queryKey: queryKeys.adminSeriesDetail(seriesId),
 			});
-			queryClient.invalidateQueries({ queryKey: queryKeys.series });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminSeries() });
 			toast.success("Series updated successfully");
 			// Navigate back to series detail page
 			router.push(`/series/${seriesId}`);

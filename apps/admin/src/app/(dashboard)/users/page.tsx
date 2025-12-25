@@ -5,7 +5,7 @@ import { Input } from "@docix/ui/components/input";
 import { Spinner } from "@docix/ui/components/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { listUsersQueryOptions } from "@/lib/api.generated";
+import { adminListUsersQueryOptions } from "@/lib/api.generated";
 import { BanUserDialog, UserRolesDialog, UsersTable } from "./_components";
 
 export default function UsersPage() {
@@ -13,7 +13,7 @@ export default function UsersPage() {
 	const [banDialogUser, setBanDialogUser] = useState<User | null>(null);
 	const [rolesDialogUser, setRolesDialogUser] = useState<User | null>(null);
 
-	const { data: users, isLoading } = useQuery(listUsersQueryOptions());
+	const { data: users, isLoading } = useQuery(adminListUsersQueryOptions());
 
 	// Filter users based on search query
 	const filteredUsers = useMemo(() => {

@@ -3,21 +3,25 @@
 
 import type {
 	AssignRoleRequest,
+	AsyncUploadResponse,
 	AuthResponse,
 	BanUserRequest,
 	ChangePasswordRequest,
 	Chapter,
+	ChapterReader,
 	ChapterWithPages,
 	CreateChapterRequest,
 	CreatePagesRequest,
 	CreateRoleRequest,
 	CreateSeriesRequest,
 	CreateTagRequest,
+	DashboardStats,
 	PaginatedResponse,
 	ReorderPagesRequest,
 	RevokeSessionRequest,
 	Role,
 	Series,
+	SeriesWithChapters,
 	SessionListItem,
 	SignInRequest,
 	SignUpRequest,
@@ -28,6 +32,7 @@ import type {
 	UpdateSeriesRequest,
 	UpdateTagRequest,
 	UpdateUserRequest,
+	UploadStatusResponse,
 	User,
 	VerifyEmailRequest,
 } from "@docix/types";
@@ -39,10 +44,6 @@ export const api = axios.create({
 	withCredentials: true,
 });
 
-// ============================================================================
-// Response Types
-// ============================================================================
-
 interface MessageResponse {
 	message: string;
 }
@@ -50,6 +51,8 @@ interface MessageResponse {
 interface CurrentSessionResponse {
 	session: SessionListItem;
 	user: User;
+	permissions: string[];
+	roles: string[];
 }
 
 interface UserPermissionsResponse {
@@ -68,6 +71,39 @@ interface RequestVerificationResponse {
 	token: string;
 }
 
+export interface BookmarkStatusResponse {
+	bookmarked: boolean;
+	bookmark_id?: string;
+}
+
+export interface ToggleBookmarkResponse {
+	bookmarked: boolean;
+	bookmark_id?: string;
+	message: string;
+}
+
+// ============================================================================
+// Query Param Interfaces
+// ============================================================================
+
+export interface ListSeriesParams {
+	page?: number;
+	limit?: number;
+	status?: string;
+	tag?: string;
+	search?: string;
+	sort?: string;
+}
+
+export interface AdminListSeriesParams {
+	page?: number;
+	limit?: number;
+	status?: string;
+	search?: string;
+	sort_by?: string;
+	order?: string;
+}
+
 // ============================================================================
 // Query Keys
 // ============================================================================
@@ -77,18 +113,32 @@ export const queryKeys = {
 	currentSession: ["auth", "session"] as const,
 	sessions: ["auth", "sessions"] as const,
 	userPermissions: ["auth", "permissions"] as const,
-	permissions: ["admin", "permissions"] as const,
-	roles: ["admin", "roles"] as const,
-	roleDetail: (id: string) => ["admin", "roles", "roleDetail", id] as const,
-	users: ["admin", "users"] as const,
-	tags: ["admin", "tags"] as const,
-	series: ["admin", "series"] as const,
-	seriesDetail: (id: string) =>
-		["admin", "series", "seriesDetail", id] as const,
-	chapters: (id: string) =>
-		["admin", "series", "chapters", "chapters", id] as const,
-	chapterDetail: (id: string) =>
-		["admin", "chapters", "chapterDetail", id] as const,
+	bookmarks: ["bookmarks"] as const,
+	bookmarkStatusDetail: (seriesId: string) =>
+		["bookmarks", "bookmarkStatusDetail", seriesId] as const,
+	series: (params?: ListSeriesParams) => ["manga", params] as const,
+	seriesBySlugDetail: (slug: string) =>
+		["manga", "seriesBySlugDetail", slug] as const,
+	chapterDetail: (slug: string) =>
+		["manga", "chapters", "chapterDetail", slug] as const,
+	tags: ["tags"] as const,
+	adminPermissions: ["admin", "permissions"] as const,
+	adminDashboardStats: ["admin", "stats"] as const,
+	adminUploadStatusDetail: (id: string) =>
+		["admin", "upload", "status", "adminUploadStatusDetail", id] as const,
+	adminRoles: ["admin", "roles"] as const,
+	adminRoleDetail: (id: string) =>
+		["admin", "roles", "adminRoleDetail", id] as const,
+	adminUsers: ["admin", "users"] as const,
+	adminTags: ["admin", "tags"] as const,
+	adminSeries: (params?: AdminListSeriesParams) =>
+		["admin", "series", params] as const,
+	adminSeriesDetail: (id: string) =>
+		["admin", "series", "adminSeriesDetail", id] as const,
+	adminChapters: (id: string) =>
+		["admin", "series", "chapters", "adminChapters", id] as const,
+	adminChapterDetail: (id: string) =>
+		["admin", "chapters", "adminChapterDetail", id] as const,
 } as const;
 
 // ============================================================================
@@ -140,27 +190,139 @@ export const getUserPermissionsQueryOptions = (config?: AxiosRequestConfig) =>
 		},
 	});
 
-export const getPermissionsQueryOptions = (config?: AxiosRequestConfig) =>
+export const listBookmarksQueryOptions = (config?: AxiosRequestConfig) =>
 	queryOptions({
-		queryKey: queryKeys.permissions,
+		queryKey: queryKeys.bookmarks,
+		queryFn: async () => {
+			const { data } = await api.get<MessageResponse>("/bookmarks", config);
+			return data;
+		},
+	});
+
+export const getBookmarkStatusQueryOptions = (
+	seriesId: string,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.bookmarkStatusDetail(seriesId),
+		queryFn: async () => {
+			const { data } = await api.get<BookmarkStatusResponse>(
+				`/bookmarks/${seriesId}`,
+				config,
+			);
+			return data;
+		},
+		enabled: !!seriesId,
+	});
+
+export const listSeriesQueryOptions = (
+	params?: ListSeriesParams,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.series(params),
+		queryFn: async () => {
+			const { data } = await api.get<PaginatedResponse<Series>>("/manga", {
+				...config,
+				params,
+			});
+			return data;
+		},
+	});
+
+export const getSeriesBySlugQueryOptions = (
+	slug: string,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.seriesBySlugDetail(slug),
+		queryFn: async () => {
+			const { data } = await api.get<SeriesWithChapters>(
+				`/manga/${slug}`,
+				config,
+			);
+			return data;
+		},
+		enabled: !!slug,
+	});
+
+export const getChapterQueryOptions = (
+	slug: string,
+	number: string,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.chapterDetail(slug),
+		queryFn: async () => {
+			const { data } = await api.get<ChapterReader>(
+				`/manga/${slug}/chapters/${number}`,
+				config,
+			);
+			return data;
+		},
+		enabled: !!slug,
+	});
+
+export const listTagsQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.tags,
+		queryFn: async () => {
+			const { data } = await api.get<Tag[]>("/tags", config);
+			return data;
+		},
+	});
+
+export const adminGetPermissionsQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminPermissions,
 		queryFn: async () => {
 			const { data } = await api.get<string[]>("/admin/permissions", config);
 			return data;
 		},
 	});
 
-export const listRolesQueryOptions = (config?: AxiosRequestConfig) =>
+export const adminGetDashboardStatsQueryOptions = (
+	config?: AxiosRequestConfig,
+) =>
 	queryOptions({
-		queryKey: queryKeys.roles,
+		queryKey: queryKeys.adminDashboardStats,
+		queryFn: async () => {
+			const { data } = await api.get<DashboardStats>("/admin/stats", config);
+			return data;
+		},
+	});
+
+export const adminGetUploadStatusQueryOptions = (
+	id: string,
+	config?: AxiosRequestConfig,
+) =>
+	queryOptions({
+		queryKey: queryKeys.adminUploadStatusDetail(id),
+		queryFn: async () => {
+			const { data } = await api.get<UploadStatusResponse>(
+				`/admin/upload/${id}/status`,
+				config,
+			);
+			return data;
+		},
+		enabled: !!id,
+	});
+
+export const adminListRolesQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminRoles,
 		queryFn: async () => {
 			const { data } = await api.get<Role[]>("/admin/roles", config);
 			return data;
 		},
 	});
 
-export const getRoleQueryOptions = (id: string, config?: AxiosRequestConfig) =>
+export const adminGetRoleQueryOptions = (
+	id: string,
+	config?: AxiosRequestConfig,
+) =>
 	queryOptions({
-		queryKey: queryKeys.roleDetail(id),
+		queryKey: queryKeys.adminRoleDetail(id),
 		queryFn: async () => {
 			const { data } = await api.get<Role>(`/admin/roles/${id}`, config);
 			return data;
@@ -168,42 +330,45 @@ export const getRoleQueryOptions = (id: string, config?: AxiosRequestConfig) =>
 		enabled: !!id,
 	});
 
-export const listUsersQueryOptions = (config?: AxiosRequestConfig) =>
+export const adminListUsersQueryOptions = (config?: AxiosRequestConfig) =>
 	queryOptions({
-		queryKey: queryKeys.users,
+		queryKey: queryKeys.adminUsers,
 		queryFn: async () => {
 			const { data } = await api.get<User[]>("/admin/users", config);
 			return data;
 		},
 	});
 
-export const listTagsQueryOptions = (config?: AxiosRequestConfig) =>
+export const adminListTagsQueryOptions = (config?: AxiosRequestConfig) =>
 	queryOptions({
-		queryKey: queryKeys.tags,
+		queryKey: queryKeys.adminTags,
 		queryFn: async () => {
 			const { data } = await api.get<Tag[]>("/admin/tags", config);
 			return data;
 		},
 	});
 
-export const listSeriesQueryOptions = (config?: AxiosRequestConfig) =>
+export const adminListSeriesQueryOptions = (
+	params?: AdminListSeriesParams,
+	config?: AxiosRequestConfig,
+) =>
 	queryOptions({
-		queryKey: queryKeys.series,
+		queryKey: queryKeys.adminSeries(params),
 		queryFn: async () => {
 			const { data } = await api.get<PaginatedResponse<Series>>(
 				"/admin/series",
-				config,
+				{ ...config, params },
 			);
 			return data;
 		},
 	});
 
-export const getSeriesQueryOptions = (
+export const adminGetSeriesQueryOptions = (
 	id: string,
 	config?: AxiosRequestConfig,
 ) =>
 	queryOptions({
-		queryKey: queryKeys.seriesDetail(id),
+		queryKey: queryKeys.adminSeriesDetail(id),
 		queryFn: async () => {
 			const { data } = await api.get<Series>(`/admin/series/${id}`, config);
 			return data;
@@ -211,12 +376,12 @@ export const getSeriesQueryOptions = (
 		enabled: !!id,
 	});
 
-export const listChaptersQueryOptions = (
+export const adminListChaptersQueryOptions = (
 	id: string,
 	config?: AxiosRequestConfig,
 ) =>
 	queryOptions({
-		queryKey: queryKeys.chapters(id),
+		queryKey: queryKeys.adminChapters(id),
 		queryFn: async () => {
 			const { data } = await api.get<Chapter[]>(
 				`/admin/series/${id}/chapters`,
@@ -227,12 +392,12 @@ export const listChaptersQueryOptions = (
 		enabled: !!id,
 	});
 
-export const getChapterQueryOptions = (
+export const adminGetChapterQueryOptions = (
 	id: string,
 	config?: AxiosRequestConfig,
 ) =>
 	queryOptions({
-		queryKey: queryKeys.chapterDetail(id),
+		queryKey: queryKeys.adminChapterDetail(id),
 		queryFn: async () => {
 			const { data } = await api.get<ChapterWithPages>(
 				`/admin/chapters/${id}`,
@@ -336,6 +501,18 @@ export const revokeSession = async (
 	return data;
 };
 
+export const toggleBookmark = async (
+	seriesId: string,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<ToggleBookmarkResponse>(
+		`/bookmarks/${seriesId}`,
+		undefined,
+		config,
+	);
+	return data;
+};
+
 export const incrementSeriesView = async (
 	id: string,
 	config?: AxiosRequestConfig,
@@ -360,7 +537,33 @@ export const incrementChapterView = async (
 	return data;
 };
 
-export const createRole = async (
+export const adminUploadFile = async (config?: AxiosRequestConfig) => {
+	const { data } = await api.post<AsyncUploadResponse>(
+		"/admin/upload",
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminUploadMultipleFiles = async (config?: AxiosRequestConfig) => {
+	const { data } = await api.post<MessageResponse>(
+		"/admin/upload/bulk",
+		undefined,
+		config,
+	);
+	return data;
+};
+
+export const adminCleanOrphanedFiles = async (config?: AxiosRequestConfig) => {
+	const { data } = await api.delete<MessageResponse>(
+		"/admin/upload/cleanup",
+		config,
+	);
+	return data;
+};
+
+export const adminCreateRole = async (
 	request: CreateRoleRequest,
 	config?: AxiosRequestConfig,
 ) => {
@@ -368,7 +571,7 @@ export const createRole = async (
 	return data;
 };
 
-export const updateRole = async (
+export const adminUpdateRole = async (
 	id: string,
 	request: UpdateRoleRequest,
 	config?: AxiosRequestConfig,
@@ -381,7 +584,10 @@ export const updateRole = async (
 	return data;
 };
 
-export const deleteRole = async (id: string, config?: AxiosRequestConfig) => {
+export const adminDeleteRole = async (
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
 	const { data } = await api.delete<MessageResponse>(
 		`/admin/roles/${id}`,
 		config,
@@ -389,7 +595,7 @@ export const deleteRole = async (id: string, config?: AxiosRequestConfig) => {
 	return data;
 };
 
-export const assignRole = async (
+export const adminAssignRole = async (
 	request: AssignRoleRequest,
 	config?: AxiosRequestConfig,
 ) => {
@@ -401,7 +607,7 @@ export const assignRole = async (
 	return data;
 };
 
-export const removeRole = async (
+export const adminRemoveRole = async (
 	request: AssignRoleRequest,
 	config?: AxiosRequestConfig,
 ) => {
@@ -413,7 +619,7 @@ export const removeRole = async (
 	return data;
 };
 
-export const banUser = async (
+export const adminBanUser = async (
 	request: BanUserRequest,
 	config?: AxiosRequestConfig,
 ) => {
@@ -425,7 +631,10 @@ export const banUser = async (
 	return data;
 };
 
-export const unbanUser = async (id: string, config?: AxiosRequestConfig) => {
+export const adminUnbanUser = async (
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
 	const { data } = await api.post<MessageResponse>(
 		`/admin/users/unban/${id}`,
 		undefined,
@@ -434,7 +643,7 @@ export const unbanUser = async (id: string, config?: AxiosRequestConfig) => {
 	return data;
 };
 
-export const createTag = async (
+export const adminCreateTag = async (
 	request: CreateTagRequest,
 	config?: AxiosRequestConfig,
 ) => {
@@ -442,7 +651,7 @@ export const createTag = async (
 	return data;
 };
 
-export const updateTag = async (
+export const adminUpdateTag = async (
 	id: string,
 	request: UpdateTagRequest,
 	config?: AxiosRequestConfig,
@@ -455,7 +664,10 @@ export const updateTag = async (
 	return data;
 };
 
-export const deleteTag = async (id: string, config?: AxiosRequestConfig) => {
+export const adminDeleteTag = async (
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
 	const { data } = await api.delete<MessageResponse>(
 		`/admin/tags/${id}`,
 		config,
@@ -463,7 +675,7 @@ export const deleteTag = async (id: string, config?: AxiosRequestConfig) => {
 	return data;
 };
 
-export const createSeries = async (
+export const adminCreateSeries = async (
 	request: CreateSeriesRequest,
 	config?: AxiosRequestConfig,
 ) => {
@@ -471,7 +683,7 @@ export const createSeries = async (
 	return data;
 };
 
-export const updateSeries = async (
+export const adminUpdateSeries = async (
 	id: string,
 	request: UpdateSeriesRequest,
 	config?: AxiosRequestConfig,
@@ -484,7 +696,10 @@ export const updateSeries = async (
 	return data;
 };
 
-export const deleteSeries = async (id: string, config?: AxiosRequestConfig) => {
+export const adminDeleteSeries = async (
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
 	const { data } = await api.delete<MessageResponse>(
 		`/admin/series/${id}`,
 		config,
@@ -492,7 +707,7 @@ export const deleteSeries = async (id: string, config?: AxiosRequestConfig) => {
 	return data;
 };
 
-export const createChapter = async (
+export const adminCreateChapter = async (
 	id: string,
 	request: CreateChapterRequest,
 	config?: AxiosRequestConfig,
@@ -505,7 +720,7 @@ export const createChapter = async (
 	return data;
 };
 
-export const updateChapter = async (
+export const adminUpdateChapter = async (
 	id: string,
 	request: UpdateChapterRequest,
 	config?: AxiosRequestConfig,
@@ -518,7 +733,7 @@ export const updateChapter = async (
 	return data;
 };
 
-export const deleteChapter = async (
+export const adminDeleteChapter = async (
 	id: string,
 	config?: AxiosRequestConfig,
 ) => {
@@ -529,7 +744,7 @@ export const deleteChapter = async (
 	return data;
 };
 
-export const addPages = async (
+export const adminAddPages = async (
 	id: string,
 	request: CreatePagesRequest,
 	config?: AxiosRequestConfig,
@@ -542,7 +757,7 @@ export const addPages = async (
 	return data;
 };
 
-export const reorderPages = async (
+export const adminReorderPages = async (
 	id: string,
 	request: ReorderPagesRequest,
 	config?: AxiosRequestConfig,
@@ -555,7 +770,7 @@ export const reorderPages = async (
 	return data;
 };
 
-export const updatePage = async (
+export const adminUpdatePage = async (
 	id: string,
 	request: UpdatePageRequest,
 	config?: AxiosRequestConfig,
@@ -568,7 +783,10 @@ export const updatePage = async (
 	return data;
 };
 
-export const deletePage = async (id: string, config?: AxiosRequestConfig) => {
+export const adminDeletePage = async (
+	id: string,
+	config?: AxiosRequestConfig,
+) => {
 	const { data } = await api.delete<MessageResponse>(
 		`/admin/pages/${id}`,
 		config,
@@ -624,6 +842,11 @@ export const revokeSessionMutationOptions = (config?: AxiosRequestConfig) =>
 			revokeSession(request, config),
 	});
 
+export const toggleBookmarkMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: (seriesId: string) => toggleBookmark(seriesId, config),
+	});
+
 export const incrementSeriesViewMutationOptions = (
 	config?: AxiosRequestConfig,
 ) =>
@@ -638,110 +861,139 @@ export const incrementChapterViewMutationOptions = (
 		mutationFn: (id: string) => incrementChapterView(id, config),
 	});
 
-export const createRoleMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminUploadFileMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (request: CreateRoleRequest) => createRole(request, config),
+		mutationFn: () => adminUploadFile(config),
 	});
 
-export const updateRoleMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminUploadMultipleFilesMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: () => adminUploadMultipleFiles(config),
+	});
+
+export const adminCleanOrphanedFilesMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: () => adminCleanOrphanedFiles(config),
+	});
+
+export const adminCreateRoleMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: (request: CreateRoleRequest) =>
+			adminCreateRole(request, config),
+	});
+
+export const adminUpdateRoleMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & UpdateRoleRequest) =>
-			updateRole(id, request, config),
+			adminUpdateRole(id, request, config),
 	});
 
-export const deleteRoleMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminDeleteRoleMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (id: string) => deleteRole(id, config),
+		mutationFn: (id: string) => adminDeleteRole(id, config),
 	});
 
-export const assignRoleMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminAssignRoleMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (request: AssignRoleRequest) => assignRole(request, config),
+		mutationFn: (request: AssignRoleRequest) =>
+			adminAssignRole(request, config),
 	});
 
-export const removeRoleMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminRemoveRoleMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (request: AssignRoleRequest) => removeRole(request, config),
+		mutationFn: (request: AssignRoleRequest) =>
+			adminRemoveRole(request, config),
 	});
 
-export const banUserMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminBanUserMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (request: BanUserRequest) => banUser(request, config),
+		mutationFn: (request: BanUserRequest) => adminBanUser(request, config),
 	});
 
-export const unbanUserMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminUnbanUserMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (id: string) => unbanUser(id, config),
+		mutationFn: (id: string) => adminUnbanUser(id, config),
 	});
 
-export const createTagMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminCreateTagMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (request: CreateTagRequest) => createTag(request, config),
+		mutationFn: (request: CreateTagRequest) => adminCreateTag(request, config),
 	});
 
-export const updateTagMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminUpdateTagMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & UpdateTagRequest) =>
-			updateTag(id, request, config),
+			adminUpdateTag(id, request, config),
 	});
 
-export const deleteTagMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminDeleteTagMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (id: string) => deleteTag(id, config),
+		mutationFn: (id: string) => adminDeleteTag(id, config),
 	});
 
-export const createSeriesMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminCreateSeriesMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (request: CreateSeriesRequest) => createSeries(request, config),
+		mutationFn: (request: CreateSeriesRequest) =>
+			adminCreateSeries(request, config),
 	});
 
-export const updateSeriesMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminUpdateSeriesMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & UpdateSeriesRequest) =>
-			updateSeries(id, request, config),
+			adminUpdateSeries(id, request, config),
 	});
 
-export const deleteSeriesMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminDeleteSeriesMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (id: string) => deleteSeries(id, config),
+		mutationFn: (id: string) => adminDeleteSeries(id, config),
 	});
 
-export const createChapterMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminCreateChapterMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & CreateChapterRequest) =>
-			createChapter(id, request, config),
+			adminCreateChapter(id, request, config),
 	});
 
-export const updateChapterMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminUpdateChapterMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & UpdateChapterRequest) =>
-			updateChapter(id, request, config),
+			adminUpdateChapter(id, request, config),
 	});
 
-export const deleteChapterMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminDeleteChapterMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
 	mutationOptions({
-		mutationFn: (id: string) => deleteChapter(id, config),
+		mutationFn: (id: string) => adminDeleteChapter(id, config),
 	});
 
-export const addPagesMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminAddPagesMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & CreatePagesRequest) =>
-			addPages(id, request, config),
+			adminAddPages(id, request, config),
 	});
 
-export const reorderPagesMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminReorderPagesMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & ReorderPagesRequest) =>
-			reorderPages(id, request, config),
+			adminReorderPages(id, request, config),
 	});
 
-export const updatePageMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminUpdatePageMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: ({ id, ...request }: { id: string } & UpdatePageRequest) =>
-			updatePage(id, request, config),
+			adminUpdatePage(id, request, config),
 	});
 
-export const deletePageMutationOptions = (config?: AxiosRequestConfig) =>
+export const adminDeletePageMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
-		mutationFn: (id: string) => deletePage(id, config),
+		mutationFn: (id: string) => adminDeletePage(id, config),
 	});

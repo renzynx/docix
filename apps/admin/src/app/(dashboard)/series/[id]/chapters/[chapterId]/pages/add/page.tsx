@@ -11,9 +11,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-	addPagesMutationOptions,
-	getChapterQueryOptions,
-	getSeriesQueryOptions,
+	adminAddPagesMutationOptions,
+	adminGetChapterQueryOptions,
+	adminGetSeriesQueryOptions,
 	queryKeys,
 } from "@/lib/api.generated";
 import { uploadImages } from "@/lib/upload";
@@ -30,16 +30,16 @@ export default function AddPagesPage() {
 	const [isUploading, setIsUploading] = useState(false);
 	const [uploadProgress, setUploadProgress] = useState<string>("");
 
-	const { data: series } = useQuery(getSeriesQueryOptions(seriesId));
+	const { data: series } = useQuery(adminGetSeriesQueryOptions(seriesId));
 	const { data: chapter, isLoading } = useQuery(
-		getChapterQueryOptions(chapterId),
+		adminGetChapterQueryOptions(chapterId),
 	);
 
 	const addPagesMutation = useMutation({
-		...addPagesMutationOptions(),
+		...adminAddPagesMutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: queryKeys.chapterDetail(chapterId),
+				queryKey: queryKeys.adminChapterDetail(chapterId),
 			});
 			toast.success(
 				`${pendingPages.length} page${pendingPages.length !== 1 ? "s" : ""} added successfully`,

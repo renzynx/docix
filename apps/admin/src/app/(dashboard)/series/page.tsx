@@ -23,8 +23,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-	deleteSeriesMutationOptions,
-	listSeriesQueryOptions,
+	adminDeleteSeriesMutationOptions,
+	adminListSeriesQueryOptions,
 	queryKeys,
 } from "@/lib/api.generated";
 import { DeleteConfirmDialog, getStatusColor } from "./_components";
@@ -33,12 +33,14 @@ export default function SeriesPage() {
 	const queryClient = useQueryClient();
 	const [deleteConfirm, setDeleteConfirm] = useState<Series | null>(null);
 
-	const { data: seriesData, isLoading } = useQuery(listSeriesQueryOptions());
+	const { data: seriesData, isLoading } = useQuery(
+		adminListSeriesQueryOptions(),
+	);
 
 	const deleteMutation = useMutation({
-		...deleteSeriesMutationOptions(),
+		...adminDeleteSeriesMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.series });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminSeries() });
 			setDeleteConfirm(null);
 			toast.success("Series deleted successfully");
 		},

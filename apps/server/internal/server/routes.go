@@ -88,6 +88,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 		router.Use(middleware.RequirePermission(rbacService, constants.PermAdminPanel))
 
 		router.Get("/permissions", adminHandler.GetPermissions)
+		router.Get("/stats", adminHandler.GetDashboardStats)
 
 		router.Route("/upload", func(r chi.Router) {
 			r.Post("/", uploadHandler.UploadFile)

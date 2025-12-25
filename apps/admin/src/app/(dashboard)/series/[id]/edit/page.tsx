@@ -11,8 +11,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-	getSeriesQueryOptions,
-	listTagsQueryOptions,
+	adminGetSeriesQueryOptions,
+	adminListTagsQueryOptions,
 } from "@/lib/api.generated";
 import {
 	getQueryClient,
@@ -32,8 +32,8 @@ export default async function EditSeriesPage({ params }: EditSeriesPageProps) {
 
 	// Prefetch series and tags in parallel
 	const [series] = await Promise.all([
-		queryClient.fetchQuery(getSeriesQueryOptions(id, { headers })),
-		queryClient.prefetchQuery(listTagsQueryOptions({ headers })),
+		queryClient.fetchQuery(adminGetSeriesQueryOptions(id, { headers })),
+		queryClient.prefetchQuery(adminListTagsQueryOptions({ headers })),
 	]);
 
 	if (!series) {

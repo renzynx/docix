@@ -19,11 +19,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-	deletePageMutationOptions,
-	getChapterQueryOptions,
-	getSeriesQueryOptions,
+	adminDeletePageMutationOptions,
+	adminGetChapterQueryOptions,
+	adminGetSeriesQueryOptions,
+	adminReorderPagesMutationOptions,
 	queryKeys,
-	reorderPagesMutationOptions,
 } from "@/lib/api.generated";
 import { PageGrid } from "./_components";
 
@@ -36,16 +36,16 @@ export default function ChapterPagesPage() {
 
 	const [deletePageConfirm, setDeletePageConfirm] = useState<Page | null>(null);
 
-	const { data: series } = useQuery(getSeriesQueryOptions(seriesId));
+	const { data: series } = useQuery(adminGetSeriesQueryOptions(seriesId));
 	const { data: chapter, isLoading } = useQuery(
-		getChapterQueryOptions(chapterId),
+		adminGetChapterQueryOptions(chapterId),
 	);
 
 	const deletePageMutation = useMutation({
-		...deletePageMutationOptions(),
+		...adminDeletePageMutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: queryKeys.chapterDetail(chapterId),
+				queryKey: queryKeys.adminChapterDetail(chapterId),
 			});
 			setDeletePageConfirm(null);
 			toast.success("Page deleted successfully");
@@ -56,10 +56,10 @@ export default function ChapterPagesPage() {
 	});
 
 	const reorderPagesMutation = useMutation({
-		...reorderPagesMutationOptions(),
+		...adminReorderPagesMutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
-				queryKey: queryKeys.chapterDetail(chapterId),
+				queryKey: queryKeys.adminChapterDetail(chapterId),
 			});
 			toast.success("Pages reordered successfully");
 		},

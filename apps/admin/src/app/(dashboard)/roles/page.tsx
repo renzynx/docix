@@ -5,7 +5,7 @@ import { Button } from "@docix/ui/components/button";
 import { Spinner } from "@docix/ui/components/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { listRolesQueryOptions } from "@/lib/api.generated";
+import { adminListRolesQueryOptions } from "@/lib/api.generated";
 import { DeleteRoleDialog, RoleFormDialog, RolesTable } from "./_components";
 
 export default function RolesPage() {
@@ -13,7 +13,7 @@ export default function RolesPage() {
 	const [editingRole, setEditingRole] = useState<Role | null>(null);
 	const [deletingRole, setDeletingRole] = useState<Role | null>(null);
 
-	const { data: roles, isLoading } = useQuery(listRolesQueryOptions());
+	const { data: roles, isLoading } = useQuery(adminListRolesQueryOptions());
 
 	return (
 		<div className="space-y-8">

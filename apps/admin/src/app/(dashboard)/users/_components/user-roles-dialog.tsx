@@ -18,10 +18,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-	assignRoleMutationOptions,
-	listRolesQueryOptions,
+	adminAssignRoleMutationOptions,
+	adminListRolesQueryOptions,
+	adminRemoveRoleMutationOptions,
 	queryKeys,
-	removeRoleMutationOptions,
 } from "@/lib/api.generated";
 
 interface UserRolesDialogProps {
@@ -41,7 +41,7 @@ export function UserRolesDialog({
 	);
 
 	const { data: allRoles, isLoading: rolesLoading } = useQuery(
-		listRolesQueryOptions(),
+		adminListRolesQueryOptions(),
 	);
 
 	// Sync selected roles when user changes
@@ -54,9 +54,9 @@ export function UserRolesDialog({
 	}, [user]);
 
 	const assignMutation = useMutation({
-		...assignRoleMutationOptions(),
+		...adminAssignRoleMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
 		},
 		onError: (error) => {
 			toast.error(error.message || "Failed to assign role");
@@ -64,9 +64,9 @@ export function UserRolesDialog({
 	});
 
 	const removeMutation = useMutation({
-		...removeRoleMutationOptions(),
+		...adminRemoveRoleMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
 		},
 		onError: (error) => {
 			toast.error(error.message || "Failed to remove role");

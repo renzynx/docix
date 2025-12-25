@@ -22,6 +22,7 @@
 		"clsx": "catalog:",
 		"embla-carousel-autoplay": "catalog:",
 		"embla-carousel-react": "catalog:",
+		"recharts": "^3.3.0",
 		"shadcn": "^3.6.2",
 		"sonner": "catalog:",
 		"tailwind-merge": "catalog:",

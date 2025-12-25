@@ -9,7 +9,7 @@ import {
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { listTagsQueryOptions } from "@/lib/api.generated";
+import { adminListTagsQueryOptions } from "@/lib/api.generated";
 import {
 	getQueryClient,
 	getRequestHeaders,
@@ -22,7 +22,7 @@ export default async function NewSeriesPage() {
 	const headers = await getRequestHeaders();
 
 	// Prefetch tags for the form
-	await queryClient.prefetchQuery(listTagsQueryOptions({ headers }));
+	await queryClient.prefetchQuery(adminListTagsQueryOptions({ headers }));
 
 	return (
 		<HydrateClient>

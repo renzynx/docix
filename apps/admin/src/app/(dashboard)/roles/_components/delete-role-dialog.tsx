@@ -13,7 +13,7 @@ import {
 import { Spinner } from "@docix/ui/components/spinner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { deleteRoleMutationOptions, queryKeys } from "@/lib/api.generated";
+import { adminDeleteRoleMutationOptions, queryKeys } from "@/lib/api.generated";
 import { RoleBadge } from "./role-badge";
 
 interface DeleteRoleDialogProps {
@@ -30,10 +30,10 @@ export function DeleteRoleDialog({
 	const queryClient = useQueryClient();
 
 	const deleteMutation = useMutation({
-		...deleteRoleMutationOptions(),
+		...adminDeleteRoleMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.roles });
-			queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminRoles });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
 			onOpenChange(false);
 			toast.success(`Role "${role?.display_name}" deleted successfully`);
 		},

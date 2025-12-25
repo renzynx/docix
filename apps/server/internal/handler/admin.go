@@ -15,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type AdminHandler struct {
@@ -416,4 +417,119 @@ func isValidPermission(perm string) bool {
 		return true
 	}
 	return slices.Contains(constants.AllPermissions, perm)
+}
+
+// GetDashboardStats returns aggregate statistics for the admin dashboard
+func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get total counts in parallel using goroutines would be more efficient,
+	// but for simplicity we'll do sequential queries
+	totalUsers, err := h.DB.Users.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		log.Error("Failed to count users: ", err)
+		response.Error(w, http.StatusInternalServerError, "Failed to get stats")
+		return
+	}
+
+	verifiedUsers, err := h.DB.Users.CountDocuments(ctx, bson.M{"verified_at": bson.M{"$ne": nil}})
+	if err != nil {
+		log.Error("Failed to count verified users: ", err)
+		verifiedUsers = 0
+	}
+
+	bannedUsers, err := h.DB.Users.CountDocuments(ctx, bson.M{"is_banned": true})
+	if err != nil {
+		log.Error("Failed to count banned users: ", err)
+		bannedUsers = 0
+	}
+
+	totalSeries, err := h.DB.Series.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		log.Error("Failed to count series: ", err)
+		response.Error(w, http.StatusInternalServerError, "Failed to get stats")
+		return
+	}
+
+	totalChapters, err := h.DB.Chapters.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		log.Error("Failed to count chapters: ", err)
+		response.Error(w, http.StatusInternalServerError, "Failed to get stats")
+		return
+	}
+
+	// Get total views from series
+	var totalViews int64
+	viewsPipeline := mongo.Pipeline{
+		{{Key: "$group", Value: bson.M{"_id": nil, "total": bson.M{"$sum": "$view_count"}}}},
+	}
+	viewsCursor, err := h.DB.Series.Aggregate(ctx, viewsPipeline)
+	if err == nil {
+		defer viewsCursor.Close(ctx)
+		if viewsCursor.Next(ctx) {
+			var result struct {
+				Total int64 `bson:"total"`
+			}
+			if err := viewsCursor.Decode(&result); err == nil {
+				totalViews = result.Total
+			}
+		}
+	}
+
+	// Get series by status
+	seriesByStatus := make(map[string]int64)
+	statusPipeline := mongo.Pipeline{
+		{{Key: "$group", Value: bson.M{"_id": "$status", "count": bson.M{"$sum": 1}}}},
+	}
+	statusCursor, err := h.DB.Series.Aggregate(ctx, statusPipeline)
+	if err == nil {
+		defer statusCursor.Close(ctx)
+		for statusCursor.Next(ctx) {
+			var result struct {
+				ID    string `bson:"_id"`
+				Count int64  `bson:"count"`
+			}
+			if err := statusCursor.Decode(&result); err == nil {
+				seriesByStatus[result.ID] = result.Count
+			}
+		}
+	}
+
+	// Get recent series (last 5)
+	var recentSeries []models.Series
+	recentSeriesCursor, err := h.DB.Series.Find(ctx, bson.M{},
+		options.Find().
+			SetSort(bson.D{{Key: "created_at", Value: -1}}).
+			SetLimit(5),
+	)
+	if err == nil {
+		defer recentSeriesCursor.Close(ctx)
+		_ = recentSeriesCursor.All(ctx, &recentSeries)
+	}
+
+	// Get recent users (last 5)
+	var recentUsers []models.User
+	recentUsersCursor, err := h.DB.Users.Find(ctx, bson.M{},
+		options.Find().
+			SetSort(bson.D{{Key: "created_at", Value: -1}}).
+			SetLimit(5),
+	)
+	if err == nil {
+		defer recentUsersCursor.Close(ctx)
+		_ = recentUsersCursor.All(ctx, &recentUsers)
+	}
+
+	stats := models.DashboardStats{
+		TotalUsers:     totalUsers,
+		TotalSeries:    totalSeries,
+		TotalChapters:  totalChapters,
+		TotalViews:     totalViews,
+		VerifiedUsers:  verifiedUsers,
+		BannedUsers:    bannedUsers,
+		SeriesByStatus: seriesByStatus,
+		RecentSeries:   recentSeries,
+		RecentUsers:    recentUsers,
+	}
+
+	response.JSON(w, http.StatusOK, stats)
 }

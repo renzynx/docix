@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-	createSeriesMutationOptions,
-	listTagsQueryOptions,
+	adminCreateSeriesMutationOptions,
+	adminListTagsQueryOptions,
 	queryKeys,
 } from "@/lib/api.generated";
 import { SeriesForm, type SeriesFormData } from "../../_components";
@@ -16,12 +16,12 @@ export function CreateSeriesForm() {
 	const queryClient = useQueryClient();
 
 	// Tags are prefetched on server, this just reads from cache
-	const { data: tags = [] } = useQuery(listTagsQueryOptions());
+	const { data: tags = [] } = useQuery(adminListTagsQueryOptions());
 
 	const createMutation = useMutation({
-		...createSeriesMutationOptions(),
+		...adminCreateSeriesMutationOptions(),
 		onSuccess: (series) => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.series });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminSeries() });
 			toast.success("Series created successfully");
 			// Navigate to the new series detail page
 			router.push(`/series/${series.id}`);

@@ -14,13 +14,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-	createChapterMutationOptions,
-	deleteChapterMutationOptions,
-	deleteSeriesMutationOptions,
-	getSeriesQueryOptions,
-	listChaptersQueryOptions,
+	adminCreateChapterMutationOptions,
+	adminDeleteChapterMutationOptions,
+	adminDeleteSeriesMutationOptions,
+	adminGetSeriesQueryOptions,
+	adminListChaptersQueryOptions,
+	adminUpdateChapterMutationOptions,
 	queryKeys,
-	updateChapterMutationOptions,
 } from "@/lib/api.generated";
 import {
 	type ChapterFormData,
@@ -43,16 +43,16 @@ export default function SeriesDetailPage() {
 		useState<Chapter | null>(null);
 
 	const { data: series, isLoading: isSeriesLoading } = useQuery(
-		getSeriesQueryOptions(seriesId),
+		adminGetSeriesQueryOptions(seriesId),
 	);
 	const { data: chapters = [], isLoading: isChaptersLoading } = useQuery(
-		listChaptersQueryOptions(seriesId),
+		adminListChaptersQueryOptions(seriesId),
 	);
 
 	const deleteSeriesMutation = useMutation({
-		...deleteSeriesMutationOptions(),
+		...adminDeleteSeriesMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.series });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminSeries() });
 			toast.success("Series deleted successfully");
 			router.push("/series");
 		},
@@ -62,11 +62,13 @@ export default function SeriesDetailPage() {
 	});
 
 	const createChapterMutation = useMutation({
-		...createChapterMutationOptions(),
+		...adminCreateChapterMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.chapters(seriesId) });
 			queryClient.invalidateQueries({
-				queryKey: queryKeys.seriesDetail(seriesId),
+				queryKey: queryKeys.adminChapters(seriesId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.adminSeriesDetail(seriesId),
 			});
 			setIsAddChapterOpen(false);
 			toast.success("Chapter added successfully");
@@ -77,9 +79,11 @@ export default function SeriesDetailPage() {
 	});
 
 	const updateChapterMutation = useMutation({
-		...updateChapterMutationOptions(),
+		...adminUpdateChapterMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.chapters(seriesId) });
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.adminChapters(seriesId),
+			});
 			setEditingChapter(null);
 			toast.success("Chapter updated successfully");
 		},
@@ -89,11 +93,13 @@ export default function SeriesDetailPage() {
 	});
 
 	const deleteChapterMutation = useMutation({
-		...deleteChapterMutationOptions(),
+		...adminDeleteChapterMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.chapters(seriesId) });
 			queryClient.invalidateQueries({
-				queryKey: queryKeys.seriesDetail(seriesId),
+				queryKey: queryKeys.adminChapters(seriesId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.adminSeriesDetail(seriesId),
 			});
 			setDeleteChapterConfirm(null);
 			toast.success("Chapter deleted successfully");

@@ -17,9 +17,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-	banUserMutationOptions,
+	adminBanUserMutationOptions,
+	adminUnbanUserMutationOptions,
 	queryKeys,
-	unbanUserMutationOptions,
 } from "@/lib/api.generated";
 
 interface BanUserDialogProps {
@@ -37,9 +37,9 @@ export function BanUserDialog({
 	const [reason, setReason] = useState("");
 
 	const banMutation = useMutation({
-		...banUserMutationOptions(),
+		...adminBanUserMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
 			onOpenChange(false);
 			setReason("");
 			toast.success(`User ${user?.email} has been banned`);
@@ -50,9 +50,9 @@ export function BanUserDialog({
 	});
 
 	const unbanMutation = useMutation({
-		...unbanUserMutationOptions(),
+		...adminUnbanUserMutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
 			onOpenChange(false);
 			toast.success(`User ${user?.email} has been unbanned`);
 		},
