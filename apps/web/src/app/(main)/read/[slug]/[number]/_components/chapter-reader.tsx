@@ -1,5 +1,6 @@
 "use client";
 
+import { useChapterView } from "@/hooks/use-view-tracking";
 import { getChapterQueryOptions } from "@docix/api";
 import { Button } from "@docix/ui/components/button";
 import { Image } from "@docix/ui/components/image";
@@ -11,7 +12,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useChapterView } from "@/hooks/use-view-tracking";
 import { ReaderAffix } from "./reader-affix";
 
 interface ChapterReaderProps {
@@ -32,7 +32,6 @@ export function ChapterReader({ slug, number }: ChapterReaderProps) {
 		next_chapter,
 	} = data;
 
-	// Track view with client-side deduplication
 	useChapterView(chapter.id);
 
 	const chapterTitle = chapter.title

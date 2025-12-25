@@ -1,5 +1,7 @@
 "use client";
 
+import { useSession } from "@/hooks/use-session";
+import { useSeriesView } from "@/hooks/use-view-tracking";
 import {
 	getBookmarkStatusQueryOptions,
 	getSeriesBySlugQueryOptions,
@@ -26,8 +28,6 @@ import {
 } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import { useSession } from "@/hooks/use-session";
-import { useSeriesView } from "@/hooks/use-view-tracking";
 
 const statusConfig = {
 	ongoing: { label: "Ongoing", variant: "default" },
@@ -57,7 +57,6 @@ export function SeriesDetail({ slug }: SeriesDetailProps) {
 	const { series, chapters } = data;
 	const status = getStatusConfig(series.status);
 
-	// Track view with client-side deduplication
 	useSeriesView(series.id);
 
 	// Only fetch bookmark status if logged in and we have a valid series ID

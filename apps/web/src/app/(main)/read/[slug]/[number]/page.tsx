@@ -1,12 +1,12 @@
+import { getChapter } from "@/lib/api.server";
+import {
+	HydrateClient,
+	getQueryClient,
+	getRequestHeaders,
+} from "@/lib/tanstack-query/server";
 import { getChapterQueryOptions } from "@docix/api";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getChapter } from "@/lib/api.server";
-import {
-	getQueryClient,
-	getRequestHeaders,
-	HydrateClient,
-} from "@/lib/tanstack-query/server";
 import { ChapterReader } from "./_components/chapter-reader";
 
 interface PageProps {
@@ -19,7 +19,6 @@ export async function generateMetadata({
 	const { slug, number } = await params;
 
 	try {
-		// Uses React cache() - will be deduplicated with page fetch
 		const data = await getChapter(slug, number);
 
 		const chapterTitle = data.chapter.title
@@ -43,7 +42,6 @@ export default async function ReaderPage({ params }: PageProps) {
 	const headers = await getRequestHeaders();
 
 	try {
-		// Prefetch for hydration - useSuspenseQuery will use this data
 		await queryClient.prefetchQuery(
 			getChapterQueryOptions(slug, number, { headers }),
 		);
