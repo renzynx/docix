@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"slices"
 	"time"
@@ -519,17 +520,136 @@ func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request)
 		_ = recentUsersCursor.All(ctx, &recentUsers)
 	}
 
+	// Get user registrations for last 7 days
+	userRegistrations := h.getDailyCounts(ctx, h.DB.Users, 7)
+
+	// Get chapter uploads for last 7 days
+	chapterUploads := h.getDailyCounts(ctx, h.DB.Chapters, 7)
+
+	// Get top 5 series by views
+	topSeriesByViews := h.getTopSeriesByViews(ctx, 5)
+
 	stats := models.DashboardStats{
-		TotalUsers:     totalUsers,
-		TotalSeries:    totalSeries,
-		TotalChapters:  totalChapters,
-		TotalViews:     totalViews,
-		VerifiedUsers:  verifiedUsers,
-		BannedUsers:    bannedUsers,
-		SeriesByStatus: seriesByStatus,
-		RecentSeries:   recentSeries,
-		RecentUsers:    recentUsers,
+		TotalUsers:        totalUsers,
+		TotalSeries:       totalSeries,
+		TotalChapters:     totalChapters,
+		TotalViews:        totalViews,
+		VerifiedUsers:     verifiedUsers,
+		BannedUsers:       bannedUsers,
+		SeriesByStatus:    seriesByStatus,
+		UserRegistrations: userRegistrations,
+		ChapterUploads:    chapterUploads,
+		TopSeriesByViews:  topSeriesByViews,
+		RecentSeries:      recentSeries,
+		RecentUsers:       recentUsers,
 	}
 
 	response.JSON(w, http.StatusOK, stats)
+}
+
+// getDailyCounts returns document counts grouped by day for the last N days
+func (h *AdminHandler) getDailyCounts(ctx context.Context, collection *mongo.Collection, days int) []models.DailyCount {
+	// Calculate the start date (N days ago at midnight UTC)
+	now := time.Now().UTC()
+	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -(days - 1))
+
+	pipeline := mongo.Pipeline{
+		// Match documents from the last N days
+		{{Key: "$match", Value: bson.M{
+			"created_at": bson.M{"$gte": startDate},
+		}}},
+		// Group by date
+		{{Key: "$group", Value: bson.M{
+			"_id": bson.M{
+				"$dateToString": bson.M{
+					"format": "%Y-%m-%d",
+					"date":   "$created_at",
+				},
+			},
+			"count": bson.M{"$sum": 1},
+		}}},
+		// Sort by date ascending
+		{{Key: "$sort", Value: bson.M{"_id": 1}}},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		log.Error("Failed to get daily counts: ", err)
+		return h.emptyDailyCounts(days)
+	}
+	defer cursor.Close(ctx)
+
+	// Create a map of date -> count from results
+	countMap := make(map[string]int64)
+	for cursor.Next(ctx) {
+		var result struct {
+			ID    string `bson:"_id"`
+			Count int64  `bson:"count"`
+		}
+		if err := cursor.Decode(&result); err == nil {
+			countMap[result.ID] = result.Count
+		}
+	}
+
+	// Fill in all days (including those with 0 count)
+	result := make([]models.DailyCount, days)
+	for i := 0; i < days; i++ {
+		date := startDate.AddDate(0, 0, i)
+		dateStr := date.Format("2006-01-02")
+		result[i] = models.DailyCount{
+			Date:  dateStr,
+			Count: countMap[dateStr], // Will be 0 if not in map
+		}
+	}
+
+	return result
+}
+
+// emptyDailyCounts returns an array of DailyCount with 0 counts for the last N days
+func (h *AdminHandler) emptyDailyCounts(days int) []models.DailyCount {
+	now := time.Now().UTC()
+	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -(days - 1))
+
+	result := make([]models.DailyCount, days)
+	for i := 0; i < days; i++ {
+		date := startDate.AddDate(0, 0, i)
+		result[i] = models.DailyCount{
+			Date:  date.Format("2006-01-02"),
+			Count: 0,
+		}
+	}
+	return result
+}
+
+// getTopSeriesByViews returns the top N series by view count
+func (h *AdminHandler) getTopSeriesByViews(ctx context.Context, limit int) []models.SeriesViewCount {
+	cursor, err := h.DB.Series.Find(ctx, bson.M{},
+		options.Find().
+			SetSort(bson.D{{Key: "view_count", Value: -1}}).
+			SetLimit(int64(limit)).
+			SetProjection(bson.M{"_id": 1, "title": 1, "view_count": 1}),
+	)
+	if err != nil {
+		log.Error("Failed to get top series by views: ", err)
+		return []models.SeriesViewCount{}
+	}
+	defer cursor.Close(ctx)
+
+	var results []models.SeriesViewCount
+	for cursor.Next(ctx) {
+		var series struct {
+			ID        bson.ObjectID `bson:"_id"`
+			Title     string        `bson:"title"`
+			ViewCount int64         `bson:"view_count"`
+		}
+		if err := cursor.Decode(&series); err == nil {
+			results = append(results, models.SeriesViewCount{
+				ID:        series.ID.Hex(),
+				Title:     series.Title,
+				ViewCount: series.ViewCount,
+			})
+		}
+	}
+
+	return results
 }

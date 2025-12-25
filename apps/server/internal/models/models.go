@@ -342,7 +342,27 @@ type DashboardStats struct {
 	// Series by status for pie chart
 	SeriesByStatus map[string]int64 `json:"series_by_status"`
 
+	// Time-series data for charts (last 7 days)
+	UserRegistrations []DailyCount `json:"user_registrations"`
+	ChapterUploads    []DailyCount `json:"chapter_uploads"`
+
+	// Top content
+	TopSeriesByViews []SeriesViewCount `json:"top_series_by_views"`
+
 	// Recent activity
 	RecentSeries []Series `json:"recent_series"`
 	RecentUsers  []User   `json:"recent_users"`
+}
+
+// DailyCount represents a count for a specific date
+type DailyCount struct {
+	Date  string `json:"date"` // YYYY-MM-DD format
+	Count int64  `json:"count"`
+}
+
+// SeriesViewCount represents a series with its view count for ranking
+type SeriesViewCount struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	ViewCount int64  `json:"view_count"`
 }

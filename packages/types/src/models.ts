@@ -301,8 +301,32 @@ export interface DashboardStats {
    */
   series_by_status: { [key: string]: number /* int64 */};
   /**
+   * Time-series data for charts (last 7 days)
+   */
+  user_registrations: DailyCount[];
+  chapter_uploads: DailyCount[];
+  /**
+   * Top content
+   */
+  top_series_by_views: SeriesViewCount[];
+  /**
    * Recent activity
    */
   recent_series: Series[];
   recent_users: User[];
+}
+/**
+ * DailyCount represents a count for a specific date
+ */
+export interface DailyCount {
+  date: string; // YYYY-MM-DD format
+  count: number /* int64 */;
+}
+/**
+ * SeriesViewCount represents a series with its view count for ranking
+ */
+export interface SeriesViewCount {
+  id: string;
+  title: string;
+  view_count: number /* int64 */;
 }
