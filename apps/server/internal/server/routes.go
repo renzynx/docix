@@ -13,10 +13,16 @@ import (
 	"github.com/renzynx/docix/server/internal/middleware"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/settings"
+	"github.com/sirupsen/logrus"
 )
 
 func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, settingsService *settings.Service) {
 	cfg := config.Get()
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
 
 	r.Use(chimiddleware.StripSlashes)
 	r.Use(middleware.CORS())
@@ -35,6 +41,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	mangaPublicHandler := handler.NewMangaPublicHandler(db, signer, settingsService)
 	uploadHandler := handler.NewUploadHandler(db, cfg, settingsService)
 	bookmarkHandler := handler.NewBookmarkHandler(db)
+	taskHandler := handler.NewTaskHandler(logrus.New())
 
 	r.Route("/health", func(router chi.Router) {
 		router.Get("/", handler.GetHealth)
@@ -91,6 +98,8 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 
 		router.Get("/permissions", adminHandler.GetPermissions)
 		router.Get("/stats", adminHandler.GetDashboardStats)
+
+		router.Get("/tasks", taskHandler.GetTaskStats)
 
 		router.Route("/upload", func(r chi.Router) {
 			r.Post("/", uploadHandler.UploadFile)
