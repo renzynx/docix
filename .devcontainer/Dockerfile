@@ -1,6 +1,6 @@
 # Combined development environment for Docix
 # Go + Node + pnpm + libvips for image processing
-FROM golang:1.24-alpine
+FROM golang:1.25.5-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
