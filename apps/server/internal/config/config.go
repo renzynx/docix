@@ -78,7 +78,7 @@ func Load() *Config {
 	}
 
 	port := 8000
-	if portStr := os.Getenv("PORT"); portStr != "" {
+	if portStr := os.Getenv("SERVER_PORT"); portStr != "" {
 		if p, err := strconv.Atoi(portStr); err == nil {
 			port = p
 		}

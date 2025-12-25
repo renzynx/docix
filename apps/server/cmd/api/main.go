@@ -42,5 +42,4 @@ func printBanner(addr string) {
                                       |__|/ \|__| 
 `)
 	fmt.Printf("\nAPI server is running at http://%s\n", addr)
-	fmt.Println("Session store: Redis\n")
 }
