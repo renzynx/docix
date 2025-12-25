@@ -1,7 +1,16 @@
 import { api } from "@docix/api";
-import type { ChapterReader, SeriesWithChapters } from "@docix/types";
+import type {
+	ChapterReader,
+	SeriesWithChapters,
+	SiteConfig,
+} from "@docix/types";
 import { cache } from "react";
 import { getRequestHeaders } from "./tanstack-query/server";
+
+export const getSiteConfig = cache(async () => {
+	const { data } = await api.get<SiteConfig>("/site-config");
+	return data;
+});
 
 export const getSeriesBySlug = cache(async (slug: string) => {
 	const headers = await getRequestHeaders();

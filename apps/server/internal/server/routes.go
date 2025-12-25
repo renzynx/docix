@@ -42,6 +42,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	mangaPublicHandler := handler.NewMangaPublicHandler(db, signer, settingsService)
 	uploadHandler := handler.NewUploadHandler(db, cfg, settingsService)
 	bookmarkHandler := handler.NewBookmarkHandler(db)
+	siteConfigHandler := handler.NewSiteConfigHandler(settingsService)
 
 	inspector, err := tasks.GetInspector()
 	if err != nil {
@@ -97,6 +98,8 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	})
 
 	r.Get("/tags", mangaPublicHandler.ListTags)
+
+	r.Get("/site-config", siteConfigHandler.GetSiteConfig)
 
 	r.Route("/admin", func(router chi.Router) {
 		router.Use(middleware.Auth(db))

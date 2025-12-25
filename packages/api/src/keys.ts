@@ -7,6 +7,7 @@ import type {
 
 export const queryKeys = {
 	health: ["health"] as const,
+	siteConfig: ["site-config"] as const,
 	currentSession: ["auth", "session"] as const,
 	sessions: ["auth", "sessions"] as const,
 	userPermissions: ["auth", "permissions"] as const,
