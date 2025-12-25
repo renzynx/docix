@@ -39,12 +39,13 @@ func New(cfg *config.Config, settings SMTPSettingsProvider) *Service {
 }
 
 func (s *Service) getSMTPConfig(ctx context.Context) (host string, port int, username, password, from string, useTLS, enabled bool) {
-	// Try to get from settings first
 	if s.settings != nil {
 		integrations, err := s.settings.GetIntegrationsConfig(ctx)
+		if err == nil && integrations != nil {
 			if !integrations.SMTPEnabled {
 				return "", 0, "", "", "", false, false
 			}
+
 			port = integrations.SMTPPort
 			username = integrations.SMTPUsername
 			from = integrations.SMTPFromEmail
@@ -79,6 +80,7 @@ func (s *Service) Send(ctx context.Context, msg *Message) error {
 		return ErrSMTPDisabled
 	}
 
+	sender := &smtpSender{
 		host:     host,
 		port:     port,
 		username: username,
@@ -167,6 +169,7 @@ func (s *Service) SendPasswordResetEmail(ctx context.Context, to, username, rese
 `, username, resetLink, resetLink)
 
 	return s.Send(ctx, &Message{
+		To:      []string{to},
 		Subject: "Reset Your Password - Docix",
 		Body:    body,
 		IsHTML:  true,
@@ -258,6 +261,7 @@ func (s *smtpSender) Send(msg *Message) error {
 			return fmt.Errorf("failed to write message: %w", err)
 		}
 
+		if err := w.Close(); err != nil {
 			return fmt.Errorf("failed to close data writer: %w", err)
 		}
 
