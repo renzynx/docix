@@ -1,4 +1,4 @@
-import { api } from "./api.generated";
+import { api } from "./api";
 
 // ============================================================================
 // Upload API Types

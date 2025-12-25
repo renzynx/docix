@@ -22,7 +22,7 @@ import {
 	adminListRolesQueryOptions,
 	adminRemoveRoleMutationOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 
 interface UserRolesDialogProps {
 	user: User | null;

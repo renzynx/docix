@@ -15,7 +15,7 @@ import {
 	adminGetChapterQueryOptions,
 	adminGetSeriesQueryOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import { uploadImages } from "@/lib/upload";
 import { BulkImageUpload, type PendingPage } from "./_components";
 

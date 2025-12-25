@@ -13,7 +13,7 @@ import {
 import { Spinner } from "@docix/ui/components/spinner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { adminDeleteRoleMutationOptions, queryKeys } from "@/lib/api.generated";
+import { adminDeleteRoleMutationOptions, queryKeys } from "@/lib/api";
 import { RoleBadge } from "./role-badge";
 
 interface DeleteRoleDialogProps {

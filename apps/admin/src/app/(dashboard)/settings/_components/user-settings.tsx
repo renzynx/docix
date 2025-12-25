@@ -15,7 +15,7 @@ import { Switch } from "@docix/ui/components/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { adminUpdateSiteSettings, queryKeys } from "@/lib/api.generated";
+import { adminUpdateSiteSettings, queryKeys } from "@/lib/api";
 
 interface UserSettingsProps {
 	settings: UserConfig;

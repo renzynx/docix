@@ -9,13 +9,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@docix/ui/components/select";
+import { Skeleton } from "@docix/ui/components/skeleton";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { Suspense, useCallback, useMemo, useState, useTransition } from "react";
 import { SeriesGrid, SeriesGridSkeleton } from "@/components/series-grid";
-import { api, listTagsQueryOptions } from "@/lib/api.generated";
+import { api, listTagsQueryOptions } from "@/lib/api";
 
 const SORT_OPTIONS = [
 	{ value: "latest", label: "Latest" },
@@ -34,7 +35,25 @@ const STATUS_OPTIONS = [
 
 const ITEMS_PER_PAGE = 24;
 
-export default function BrowsePage() {
+function BrowsePageSkeleton() {
+	return (
+		<div className="flex flex-col gap-6">
+			<div>
+				<Skeleton className="h-8 w-48" />
+				<Skeleton className="h-5 w-64 mt-1" />
+			</div>
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
+				<Skeleton className="h-10 flex-1 min-w-64" />
+				<Skeleton className="h-10 w-40" />
+				<Skeleton className="h-10 w-36" />
+				<Skeleton className="h-10 w-36" />
+			</div>
+			<SeriesGridSkeleton count={ITEMS_PER_PAGE} />
+		</div>
+	);
+}
+
+function BrowsePageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const [isPending, startTransition] = useTransition();
@@ -295,5 +314,13 @@ export default function BrowsePage() {
 				</>
 			)}
 		</div>
+	);
+}
+
+export default function BrowsePage() {
+	return (
+		<Suspense fallback={<BrowsePageSkeleton />}>
+			<BrowsePageContent />
+		</Suspense>
 	);
 }

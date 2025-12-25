@@ -16,7 +16,7 @@ import {
 } from "@docix/ui/components/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { adminGetStatsQueryOptions } from "@/lib/api.generated";
+import { adminGetStatsQueryOptions } from "@/lib/api";
 import { QueueCard, ServerList, TaskTable } from "./_components";
 
 export default function TasksPage() {

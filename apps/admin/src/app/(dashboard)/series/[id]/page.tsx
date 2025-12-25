@@ -21,7 +21,7 @@ import {
 	adminListChaptersQueryOptions,
 	adminUpdateChapterMutationOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import {
 	type ChapterFormData,
 	ChapterFormDialog,

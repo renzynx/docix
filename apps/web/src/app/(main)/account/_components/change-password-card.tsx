@@ -14,7 +14,7 @@ import { AxiosError } from "axios";
 import { toast } from "sonner";
 import z from "zod";
 import { useAppForm } from "@/hooks/use-app-form";
-import { changePasswordMutationOptions } from "@/lib/api.generated";
+import { changePasswordMutationOptions } from "@/lib/api";
 
 const changePasswordSchema = z
 	.object({

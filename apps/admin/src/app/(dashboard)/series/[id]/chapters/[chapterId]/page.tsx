@@ -24,7 +24,7 @@ import {
 	adminGetSeriesQueryOptions,
 	adminReorderPagesMutationOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import { PageGrid } from "./_components";
 
 export default function ChapterPagesPage() {

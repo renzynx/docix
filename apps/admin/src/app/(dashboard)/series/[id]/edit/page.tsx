@@ -13,7 +13,7 @@ import { notFound } from "next/navigation";
 import {
 	adminGetSeriesQueryOptions,
 	adminListTagsQueryOptions,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import {
 	getQueryClient,
 	getRequestHeaders,

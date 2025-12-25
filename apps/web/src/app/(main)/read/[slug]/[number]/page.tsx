@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getChapterQueryOptions } from "@/lib/api.generated";
+import { getChapterQueryOptions } from "@/lib/api";
 import { getChapter } from "@/lib/api.server";
 import {
 	getQueryClient,

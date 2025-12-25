@@ -32,7 +32,7 @@ import {
 	adminListTagsQueryOptions,
 	adminUpdateTagMutationOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 
 export default function TagsPage() {
 	const queryClient = useQueryClient();

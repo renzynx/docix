@@ -8,7 +8,7 @@ import {
 	adminCreateSeriesMutationOptions,
 	adminListTagsQueryOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import { SeriesForm, type SeriesFormData } from "../../_components";
 
 export function CreateSeriesForm() {

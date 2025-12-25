@@ -7,7 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { SeriesCard } from "@/components/series-card";
 import { useSession } from "@/hooks/use-session";
-import { api, queryKeys } from "@/lib/api.generated";
+import { api, queryKeys } from "@/lib/api";
 
 interface BookmarkWithSeries {
 	id: string;

@@ -20,7 +20,7 @@ import {
 	adminPerformMaintenanceAction,
 	adminUpdateSiteSettings,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 
 interface MaintenanceSettingsProps {
 	settings: MaintenanceConfig;

@@ -26,7 +26,7 @@ import {
 	getSeriesBySlugQueryOptions,
 	queryKeys,
 	toggleBookmark,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 
 const statusConfig = {
 	ongoing: { label: "Ongoing", variant: "default" },

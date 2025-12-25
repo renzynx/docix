@@ -9,7 +9,7 @@ import {
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { adminListTagsQueryOptions } from "@/lib/api.generated";
+import { adminListTagsQueryOptions } from "@/lib/api";
 import {
 	getQueryClient,
 	getRequestHeaders,

@@ -38,7 +38,7 @@ import {
 	adminRunAllScheduledTasks,
 	adminUnpauseQueue,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 
 interface QueueCardProps {
 	queue: QueueInfo;

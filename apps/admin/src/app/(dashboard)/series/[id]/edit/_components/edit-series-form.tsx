@@ -8,7 +8,7 @@ import {
 	adminListTagsQueryOptions,
 	adminUpdateSeriesMutationOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import {
 	SeriesForm,
 	type SeriesFormData,

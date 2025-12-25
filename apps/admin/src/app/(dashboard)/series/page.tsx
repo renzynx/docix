@@ -26,7 +26,7 @@ import {
 	adminDeleteSeriesMutationOptions,
 	adminListSeriesQueryOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import { DeleteConfirmDialog, getStatusColor } from "./_components";
 
 export default function SeriesPage() {

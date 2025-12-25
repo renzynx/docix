@@ -5,7 +5,7 @@ import { Button } from "@docix/ui/components/button";
 import { Spinner } from "@docix/ui/components/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { adminListRolesQueryOptions } from "@/lib/api.generated";
+import { adminListRolesQueryOptions } from "@/lib/api";
 import { DeleteRoleDialog, RoleFormDialog, RolesTable } from "./_components";
 
 export default function RolesPage() {

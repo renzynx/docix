@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { getCurrentSessionQueryOptions } from "@/lib/api.generated";
+import { getCurrentSessionQueryOptions } from "@/lib/api";
 import {
 	getQueryClient,
 	getRequestHeaders,

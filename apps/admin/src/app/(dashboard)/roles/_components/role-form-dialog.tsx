@@ -22,7 +22,7 @@ import {
 	adminGetPermissionsQueryOptions,
 	adminUpdateRoleMutationOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import { PermissionSelector } from "./permission-selector";
 
 interface RoleFormDialogProps {

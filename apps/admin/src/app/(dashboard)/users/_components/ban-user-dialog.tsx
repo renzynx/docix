@@ -20,7 +20,7 @@ import {
 	adminBanUserMutationOptions,
 	adminUnbanUserMutationOptions,
 	queryKeys,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 
 interface BanUserDialogProps {
 	user: User | null;

@@ -3,7 +3,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import {
 	getCurrentSessionQueryOptions,
 	getUserPermissionsQueryOptions,
-} from "@/lib/api.generated";
+} from "@/lib/api";
 import { type AdminSession, hasAdminAccess } from "@/lib/auth";
 import {
 	getQueryClient,

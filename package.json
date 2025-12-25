@@ -15,9 +15,7 @@
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"type-check": "turbo type-check",
-		"generate:types": "pnpm --filter server generate:types",
-		"generate:api": "go run ./packages/go/codegen/",
-		"generate": "pnpm generate:types && pnpm generate:api",
+		"generate": "pnpm --filter server generate:types",
 		"clean": "turbo clean"
 	},
 	"devDependencies": {
