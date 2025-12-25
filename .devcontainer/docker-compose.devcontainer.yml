@@ -1,14 +1,12 @@
-# DevContainer-specific service configuration
-# This file adds the devcontainer service that VS Code connects to
 services:
   devcontainer:
     build:
-      context: ..
+      context: ${LOCAL_WORKSPACE_FOLDER:-.}
       dockerfile: .devcontainer/Dockerfile
     container_name: docix-devcontainer
     volumes:
-      # Mount the entire project
-      - ..:/app
+      # Mount the entire project 
+      - ${LOCAL_WORKSPACE_FOLDER:-.}:/app
       # Persist Go module cache
       - go_mod_cache:/go/pkg/mod
       # Shared uploads volume with other services
@@ -16,7 +14,7 @@ services:
     environment:
       # Server environment
       - HOST=0.0.0.0
-      - PORT=8000
+      - SERVER_PORT=8000
       - GO_ENV=development
       - AUTH_SECRET=dev-secret-change-in-production
       - TRUSTED_ORIGINS=http://localhost:3000,http://localhost:3001
@@ -34,7 +32,7 @@ services:
       - CDN_PORT=8081
       - URL_TTL_SECS=86400
       # Frontend environment
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
     depends_on:
       mongodb:
         condition: service_healthy
@@ -49,7 +47,6 @@ services:
       - "8000:8000"
       - "8081:8081"
 
-  # Disable other Go services - devcontainer runs them all
   server:
     profiles:
       - disabled
