@@ -39,10 +39,11 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	r.Use(middleware.Maintenance(settingsService))
 	r.Use(rateLimiter.Middleware())
 
-	signer := signing.NewSigner(
+	signer := signing.NewSignerWithBucket(
 		cfg.CDN.HMACSecret,
 		cfg.CDN.BaseURL,
 		time.Duration(cfg.CDN.URLTTLSecs)*time.Second,
+		time.Duration(cfg.CDN.BucketDurationSec)*time.Second,
 	)
 
 	authHandler := handler.NewAuthHandler(db, rbacService, settingsService)

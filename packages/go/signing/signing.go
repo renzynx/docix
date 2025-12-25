@@ -10,16 +10,27 @@ import (
 )
 
 type Signer struct {
-	secret  []byte
-	baseURL string
-	ttl     time.Duration
+	secret         []byte
+	baseURL        string
+	ttl            time.Duration
+	bucketDuration time.Duration
 }
 
 func NewSigner(secret, baseURL string, ttl time.Duration) *Signer {
 	return &Signer{
-		secret:  []byte(secret),
-		baseURL: baseURL,
-		ttl:     ttl,
+		secret:         []byte(secret),
+		baseURL:        baseURL,
+		ttl:            ttl,
+		bucketDuration: ttl,
+	}
+}
+
+func NewSignerWithBucket(secret, baseURL string, ttl, bucketDuration time.Duration) *Signer {
+	return &Signer{
+		secret:         []byte(secret),
+		baseURL:        baseURL,
+		ttl:            ttl,
+		bucketDuration: bucketDuration,
 	}
 }
 
@@ -27,6 +38,21 @@ func NewVerifier(secret string) *Signer {
 	return &Signer{
 		secret: []byte(secret),
 	}
+}
+
+// quantizeExpiration aligns expiration time to bucket boundaries for cache efficiency.
+// All requests within the same bucket window get identical expiration times,
+// enabling Cloudflare to serve a single cached copy to all users.
+func (s *Signer) quantizeExpiration(targetTime time.Time) time.Time {
+	if s.bucketDuration == 0 {
+		return targetTime
+	}
+
+	unixTarget := targetTime.Unix()
+	bucketSecs := int64(s.bucketDuration.Seconds())
+
+	quantized := ((unixTarget + bucketSecs - 1) / bucketSecs) * bucketSecs
+	return time.Unix(quantized, 0)
 }
 
 func (s *Signer) SignURL(filename string, expiresAt time.Time) (ex string, hm string) {
@@ -50,7 +76,10 @@ func (s *Signer) GenerateSignedURLWithBase(filename, baseURL string, ttl time.Du
 	if ttl == 0 {
 		ttl = s.ttl
 	}
-	expiresAt := time.Now().Add(ttl)
+
+	rawExpiry := time.Now().Add(ttl)
+	expiresAt := s.quantizeExpiration(rawExpiry)
+
 	ex, hm := s.SignURL(filename, expiresAt)
 	return fmt.Sprintf("%s/%s?ex=%s&hm=%s", baseURL, filename, ex, hm)
 }

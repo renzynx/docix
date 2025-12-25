@@ -27,9 +27,10 @@ type UploadConfig struct {
 }
 
 type CDNConfig struct {
-	BaseURL    string // CDN service URL (e.g., http://localhost:8081)
-	HMACSecret string // Shared secret for signing URLs
-	URLTTLSecs int64  // URL expiration time in seconds
+	BaseURL           string // CDN service URL (e.g., http://localhost:8081)
+	HMACSecret        string // Shared secret for signing URLs
+	URLTTLSecs        int64  // URL expiration time in seconds
+	BucketDurationSec int64  // Time bucket size for cache-friendly URL quantization
 }
 
 type Config struct {
@@ -189,9 +190,17 @@ func loadCDNConfig() CDNConfig {
 		}
 	}
 
+	bucketDurationSec := int64(6 * 60 * 60)
+	if bucket := os.Getenv("CDN_BUCKET_DURATION_SECS"); bucket != "" {
+		if parsed, err := strconv.ParseInt(bucket, 10, 64); err == nil {
+			bucketDurationSec = parsed
+		}
+	}
+
 	return CDNConfig{
-		BaseURL:    baseURL,
-		HMACSecret: hmacSecret,
-		URLTTLSecs: urlTTLSecs,
+		BaseURL:           baseURL,
+		HMACSecret:        hmacSecret,
+		URLTTLSecs:        urlTTLSecs,
+		BucketDurationSec: bucketDurationSec,
 	}
 }
