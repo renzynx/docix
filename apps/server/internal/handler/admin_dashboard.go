@@ -13,7 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-// GetDashboardStats returns aggregate statistics for the admin dashboard
 func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -183,7 +182,7 @@ func (h *AdminHandler) getDailyCounts(ctx context.Context, collection *mongo.Col
 	return result
 }
 
-// emptyDailyCounts returns an array of DailyCount with 0 counts for the last N days
+// returns an array of DailyCount with 0 counts for the last N days
 func (h *AdminHandler) emptyDailyCounts(days int) []models.DailyCount {
 	now := time.Now().UTC()
 	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -(days - 1))
@@ -199,7 +198,7 @@ func (h *AdminHandler) emptyDailyCounts(days int) []models.DailyCount {
 	return result
 }
 
-// getTopSeriesByViews returns the top N series by view count
+// returns the top N series by view count
 func (h *AdminHandler) getTopSeriesByViews(ctx context.Context, limit int) []models.SeriesViewCount {
 	cursor, err := h.DB.Series.Find(ctx, bson.M{},
 		options.Find().

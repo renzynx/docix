@@ -10,16 +10,12 @@ import (
 	"github.com/google/uuid"
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/renzynx/docix/server/internal/auth"
+	"github.com/renzynx/docix/server/internal/constants"
 	"github.com/renzynx/docix/server/internal/middleware"
 	"github.com/renzynx/docix/server/internal/models"
 	"github.com/renzynx/docix/server/internal/response"
 	"github.com/renzynx/docix/server/internal/validator"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	sessionKeyPrefix      = "session:"
-	userSessionsKeyPrefix = "user_sessions:"
 )
 
 type Session struct {
@@ -64,7 +60,7 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isMember, err := h.Redis.SIsMember(r.Context(), userSessionsKeyPrefix+sess.UserID, req.SessionID).Result()
+	isMember, err := h.Redis.SIsMember(r.Context(), constants.UserSessionsKeyPrefix+sess.UserID, req.SessionID).Result()
 	if err != nil || !isMember {
 		response.Error(w, http.StatusNotFound, "Session not found")
 		return
@@ -138,9 +134,9 @@ func (h *AuthHandler) createSession(r *http.Request, userID string) (*Session, s
 
 	ctx := r.Context()
 	pipe := h.Redis.Pipeline()
-	pipe.Set(ctx, sessionKeyPrefix+sess.ID, data, ttl)
-	pipe.SAdd(ctx, userSessionsKeyPrefix+userID, sess.ID)
-	pipe.Expire(ctx, userSessionsKeyPrefix+userID, ttl+24*time.Hour)
+	pipe.Set(ctx, constants.SessionKeyPrefix+sess.ID, data, ttl)
+	pipe.SAdd(ctx, constants.UserSessionsKeyPrefix+userID, sess.ID)
+	pipe.Expire(ctx, constants.UserSessionsKeyPrefix+userID, ttl+24*time.Hour)
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		return nil, "", fmt.Errorf("failed to create session: %w", err)
@@ -155,7 +151,7 @@ func (h *AuthHandler) createSession(r *http.Request, userID string) (*Session, s
 }
 
 func (h *AuthHandler) getSession(ctx context.Context, id string) (*Session, error) {
-	data, err := h.Redis.Get(ctx, sessionKeyPrefix+id).Bytes()
+	data, err := h.Redis.Get(ctx, constants.SessionKeyPrefix+id).Bytes()
 	if err != nil {
 		if err == goredis.Nil {
 			return nil, nil
@@ -172,20 +168,20 @@ func (h *AuthHandler) getSession(ctx context.Context, id string) (*Session, erro
 
 func (h *AuthHandler) deleteSession(ctx context.Context, sessionID, userID string) {
 	pipe := h.Redis.Pipeline()
-	pipe.Del(ctx, sessionKeyPrefix+sessionID)
-	pipe.SRem(ctx, userSessionsKeyPrefix+userID, sessionID)
+	pipe.Del(ctx, constants.SessionKeyPrefix+sessionID)
+	pipe.SRem(ctx, constants.UserSessionsKeyPrefix+userID, sessionID)
 	pipe.Exec(ctx)
 }
 
 func (h *AuthHandler) listUserSessions(ctx context.Context, userID string) ([]Session, error) {
-	sessionIDs, err := h.Redis.SMembers(ctx, userSessionsKeyPrefix+userID).Result()
+	sessionIDs, err := h.Redis.SMembers(ctx, constants.UserSessionsKeyPrefix+userID).Result()
 	if err != nil || len(sessionIDs) == 0 {
 		return nil, err
 	}
 
 	keys := make([]string, len(sessionIDs))
 	for i, id := range sessionIDs {
-		keys[i] = sessionKeyPrefix + id
+		keys[i] = constants.SessionKeyPrefix + id
 	}
 
 	values, err := h.Redis.MGet(ctx, keys...).Result()
@@ -216,7 +212,7 @@ func (h *AuthHandler) listUserSessions(ctx context.Context, userID string) ([]Se
 		go func() {
 			cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			h.Redis.SRem(cleanupCtx, userSessionsKeyPrefix+userID, expiredIDs)
+			h.Redis.SRem(cleanupCtx, constants.UserSessionsKeyPrefix+userID, expiredIDs)
 		}()
 	}
 

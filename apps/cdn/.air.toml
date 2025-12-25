@@ -7,7 +7,7 @@ tmp_dir = "tmp"
 [build]
   args_bin = []
   bin = "./tmp/cdn"
-  cmd = "go build -o ./tmp/cdn ."
+  cmd = "go build -o ./tmp/cdn ./cmd/server/main.go"
   delay = 1000
   entrypoint = ["./tmp/cdn"]
   exclude_dir = ["tmp", "vendor", "testdata"]

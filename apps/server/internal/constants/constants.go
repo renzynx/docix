@@ -1,6 +1,11 @@
 package constants
 
 const (
+	SessionKeyPrefix      = "session:"
+	UserSessionsKeyPrefix = "user_sessions:"
+)
+
+const (
 	CookiePrefix           = "docix_"
 	SessionCookieName      = CookiePrefix + "session"
 	DatabaseName           = "docix"
