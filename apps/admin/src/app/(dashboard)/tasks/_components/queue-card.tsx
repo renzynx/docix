@@ -1,5 +1,13 @@
 "use client";
 
+import {
+	adminDeleteAllArchivedTasks,
+	adminPauseQueue,
+	adminRunAllRetryTasks,
+	adminRunAllScheduledTasks,
+	adminUnpauseQueue,
+	queryKeys,
+} from "@docix/api";
 import type { QueueInfo } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import { Button } from "@docix/ui/components/button";
@@ -31,14 +39,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-	adminDeleteAllArchivedTasks,
-	adminPauseQueue,
-	adminRunAllRetryTasks,
-	adminRunAllScheduledTasks,
-	adminUnpauseQueue,
-	queryKeys,
-} from "@docix/api";
 
 interface QueueCardProps {
 	queue: QueueInfo;

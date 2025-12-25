@@ -7,7 +7,6 @@ services:
     volumes:
       # Mount the entire project 
       - ${LOCAL_WORKSPACE_FOLDER:-.}:/app
-      # Exclude host node_modules - use container's own
       - /app/node_modules
       - /app/apps/web/node_modules
       - /app/apps/admin/node_modules
@@ -48,7 +47,6 @@ services:
         condition: service_healthy
     # Keep container running for VS Code to attach
     command: sleep infinity
-    # Forward all relevant ports
     ports:
       - "3000:3000"
       - "3001:3001"

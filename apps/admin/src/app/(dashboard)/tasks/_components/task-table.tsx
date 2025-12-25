@@ -1,5 +1,12 @@
 "use client";
 
+import {
+	adminArchiveTask,
+	adminDeleteTask,
+	adminListTasksQueryOptions,
+	adminRunTask,
+	queryKeys,
+} from "@docix/api";
 import type { TaskInfo, TaskState } from "@docix/types";
 import { Badge } from "@docix/ui/components/badge";
 import { Button } from "@docix/ui/components/button";
@@ -34,13 +41,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import {
-	adminArchiveTask,
-	adminDeleteTask,
-	adminListTasksQueryOptions,
-	adminRunTask,
-	queryKeys,
-} from "@docix/api";
 
 interface TaskTableProps {
 	queueName: string;
@@ -163,8 +163,8 @@ export function TaskTable({ queueName }: TaskTableProps) {
 											<TableHead>Type</TableHead>
 											<TableHead>State</TableHead>
 											<TableHead>Retried</TableHead>
-											<TableHead>Created</TableHead>
-											<TableHead className="w-[50px]" />
+											<TableHead>Next Process</TableHead>
+											<TableHead className="w-12.5" />
 										</TableRow>
 									</TableHeader>
 									<TableBody>
@@ -263,11 +263,12 @@ function TaskRow({
 				{task.retried}/{task.max_retry}
 			</TableCell>
 			<TableCell className="text-muted-foreground">
-				{task.next_process_at
-					? formatDistanceToNow(new Date(task.next_process_at), {
-							addSuffix: true,
-						})
-					: "-"}
+				{(() => {
+					if (!task.next_process_at) return "-";
+					const date = new Date(task.next_process_at);
+					if (date.getFullYear() <= 1) return "-";
+					return formatDistanceToNow(date, { addSuffix: true });
+				})()}
 			</TableCell>
 			<TableCell>
 				<DropdownMenu>
