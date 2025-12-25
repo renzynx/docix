@@ -40,7 +40,6 @@ type UserConfig struct {
 	RequireEmailVerification bool   `bson:"require_email_verification" json:"require_email_verification"`
 	DefaultRoleID            string `bson:"default_role_id" json:"default_role_id"`
 	AllowUsernameChange      bool   `bson:"allow_username_change" json:"allow_username_change"`
-	MinPasswordLength        int    `bson:"min_password_length" json:"min_password_length"`
 	MaxLoginAttempts         int    `bson:"max_login_attempts" json:"max_login_attempts"`
 }
 

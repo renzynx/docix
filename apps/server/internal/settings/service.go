@@ -302,7 +302,6 @@ func (s *Service) defaultSettings() models.SiteSettings {
 			RequireEmailVerification: true,
 			DefaultRoleID:            "",
 			AllowUsernameChange:      true,
-			MinPasswordLength:        8,
 			MaxLoginAttempts:         5,
 		},
 		Integrations: models.IntegrationsConfig{

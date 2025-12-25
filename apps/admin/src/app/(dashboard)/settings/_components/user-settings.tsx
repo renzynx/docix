@@ -1,5 +1,6 @@
 "use client";
 
+import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 import type { UserConfig } from "@docix/types";
 import { Button } from "@docix/ui/components/button";
 import {
@@ -15,7 +16,6 @@ import { Switch } from "@docix/ui/components/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { adminUpdateSiteSettings, queryKeys } from "@docix/api";
 
 interface UserSettingsProps {
 	settings: UserConfig;
@@ -98,44 +98,24 @@ export function UserSettings({ settings }: UserSettingsProps) {
 						</div>
 					</div>
 
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-2">
-							<Label htmlFor="minPassword">Minimum Password Length</Label>
-							<Input
-								id="minPassword"
-								type="number"
-								min={6}
-								max={128}
-								value={form.min_password_length}
-								onChange={(e) =>
-									setForm({
-										...form,
-										min_password_length:
-											Number.parseInt(e.target.value, 10) || 8,
-									})
-								}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="maxAttempts">Max Login Attempts</Label>
-							<Input
-								id="maxAttempts"
-								type="number"
-								min={1}
-								max={20}
-								value={form.max_login_attempts}
-								onChange={(e) =>
-									setForm({
-										...form,
-										max_login_attempts:
-											Number.parseInt(e.target.value, 10) || 5,
-									})
-								}
-							/>
-							<p className="text-xs text-muted-foreground">
-								Before temporary lockout
-							</p>
-						</div>
+					<div className="space-y-2">
+						<Label htmlFor="maxAttempts">Max Login Attempts</Label>
+						<Input
+							id="maxAttempts"
+							type="number"
+							min={1}
+							max={20}
+							value={form.max_login_attempts}
+							onChange={(e) =>
+								setForm({
+									...form,
+									max_login_attempts: Number.parseInt(e.target.value, 10) || 5,
+								})
+							}
+						/>
+						<p className="text-xs text-muted-foreground">
+							Before temporary lockout
+						</p>
 					</div>
 
 					<div className="space-y-2">

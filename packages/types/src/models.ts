@@ -334,7 +334,6 @@ export interface UserConfig {
 	require_email_verification: boolean;
 	default_role_id: string;
 	allow_username_change: boolean;
-	min_password_length: number /* int */;
 	max_login_attempts: number /* int */;
 }
 export interface IntegrationsConfig {
