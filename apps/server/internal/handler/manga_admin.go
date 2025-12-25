@@ -29,9 +29,14 @@ func (h *MangaAdminHandler) signCoverImage(ctx context.Context, filename string)
 	if filename == "" {
 		return ""
 	}
-	if h.Settings != nil && !h.Settings.IsCDNEnabled(ctx) {
-		return filename
+
+	// Determine base URL: use CDN from settings if enabled and configured, otherwise use default
+	if h.Settings != nil && h.Settings.IsCDNEnabled(ctx) {
+		if cdnURL := h.Settings.GetCDNBaseURL(ctx); cdnURL != "" {
+			return h.Signer.GenerateSignedURLWithBase(filename, cdnURL, 0)
+		}
 	}
+
 	return h.Signer.GenerateSignedURL(filename)
 }
 

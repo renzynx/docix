@@ -36,9 +36,13 @@ func (h *MangaPublicHandler) signImageURL(ctx context.Context, filename string) 
 	if filename == "" {
 		return ""
 	}
-	if h.Settings != nil && !h.Settings.IsCDNEnabled(ctx) {
-		return filename
+
+	if h.Settings != nil && h.Settings.IsCDNEnabled(ctx) {
+		if cdnURL := h.Settings.GetCDNBaseURL(ctx); cdnURL != "" {
+			return h.Signer.GenerateSignedURLWithBase(filename, cdnURL, 0)
+		}
 	}
+
 	return h.Signer.GenerateSignedURL(filename)
 }
 
