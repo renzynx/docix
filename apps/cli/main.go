@@ -447,7 +447,6 @@ func showUser(email string) {
 		log.Fatalf("Failed to find user: %v", err)
 	}
 
-	// Get role names
 	var roleNames []string
 	if len(user.RoleIDs) > 0 {
 		cursor, err := roles.Find(ctx, bson.M{"_id": bson.M{"$in": user.RoleIDs}})
@@ -541,7 +540,6 @@ func searchUsers(query string) {
 
 	users := db.Collection(usersCollection)
 
-	// Search by email or username using regex
 	filter := bson.M{
 		"$or": []bson.M{
 			{"email": bson.M{"$regex": query, "$options": "i"}},

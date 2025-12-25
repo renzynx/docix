@@ -62,7 +62,6 @@ func (h *UploadHandler) getMaxFileSize(ctx context.Context) int64 {
 // isAllowedFormat checks if the detected format is in the allowed list from settings
 func (h *UploadHandler) isAllowedFormat(ctx context.Context, format string) bool {
 	if h.settings == nil {
-		// If no settings, allow all detected formats
 		return format != ""
 	}
 
@@ -71,7 +70,6 @@ func (h *UploadHandler) isAllowedFormat(ctx context.Context, format string) bool
 		return format != ""
 	}
 
-	// Normalize format names for comparison
 	formatAliases := map[string][]string{
 		"jpeg": {"jpg", "jpeg"},
 		"png":  {"png"},
@@ -177,7 +175,6 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if format is allowed by settings
 	if !h.isAllowedFormat(r.Context(), format) {
 		response.Error(w, http.StatusBadRequest, fmt.Sprintf("Image format '%s' is not allowed", format))
 		return
@@ -298,7 +295,6 @@ func (h *UploadHandler) UploadMultipleFiles(w http.ResponseWriter, r *http.Reque
 			continue
 		}
 
-		// Check if format is allowed by settings
 		if !h.isAllowedFormat(r.Context(), format) {
 			file.Close()
 			failed = append(failed, fileHeader.Filename)

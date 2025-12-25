@@ -86,9 +86,8 @@ func (s *Service) getSMTPConfig(ctx context.Context) (host string, port int, use
 	return smtpCfg.Host, smtpCfg.Port, smtpCfg.Username, smtpCfg.Password, smtpCfg.From, smtpCfg.UseTLS, true
 }
 
-// Send sends an email message
+// Send sends an email message. In development, logs to console instead.
 func (s *Service) Send(ctx context.Context, msg *Message) error {
-	// In development mode, use console sender
 	if !s.config.IsProduction {
 		return s.sendToConsole(msg)
 	}
@@ -242,11 +241,9 @@ func (s *smtpSender) Send(msg *Message) error {
 
 	message := []byte(builder.String())
 
-	// Setup authentication
 	auth := smtp.PlainAuth("", s.username, s.password, s.host)
 
 	if s.useTLS {
-		// TLS connection
 		tlsConfig := &tls.Config{
 			ServerName: s.host,
 		}

@@ -50,12 +50,10 @@ func (s *Service) Load(ctx context.Context) error {
 		return err
 	}
 
-	// Update local cache
 	s.mu.Lock()
 	s.localCache = settings
 	s.mu.Unlock()
 
-	// Update Redis cache
 	if s.redis != nil {
 		if err := s.cacheToRedis(ctx, settings); err != nil {
 			log.Warnf("Failed to cache settings to Redis: %v", err)
@@ -66,10 +64,9 @@ func (s *Service) Load(ctx context.Context) error {
 	return nil
 }
 
-// Get returns the current site settings
-// Tries Redis first, falls back to local cache, then MongoDB
+// Get returns the current site settings.
+// Multi-tier cache: Redis → local memory → MongoDB fallback.
 func (s *Service) Get(ctx context.Context) (*models.SiteSettings, error) {
-	// Try Redis first
 	if s.redis != nil {
 		settings, err := s.getFromRedis(ctx)
 		if err == nil && settings != nil {
@@ -80,7 +77,6 @@ func (s *Service) Get(ctx context.Context) (*models.SiteSettings, error) {
 		}
 	}
 
-	// Try local cache
 	s.mu.RLock()
 	if s.localCache != nil {
 		cached := s.localCache
@@ -89,13 +85,11 @@ func (s *Service) Get(ctx context.Context) (*models.SiteSettings, error) {
 	}
 	s.mu.RUnlock()
 
-	// Fall back to MongoDB and refresh cache
 	settings, err := s.getOrCreateFromDB(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Update caches
 	s.mu.Lock()
 	s.localCache = settings
 	s.mu.Unlock()
@@ -126,13 +120,11 @@ func (s *Service) Update(ctx context.Context, updates bson.M) (*models.SiteSetti
 		return nil, err
 	}
 
-	// Reload settings to get updated values
 	err = s.db.SiteSettings.FindOne(ctx, bson.M{"_id": settings.ID}).Decode(settings)
 	if err != nil {
 		return nil, err
 	}
 
-	// Update caches
 	s.mu.Lock()
 	s.localCache = settings
 	s.mu.Unlock()

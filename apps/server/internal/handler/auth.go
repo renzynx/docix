@@ -45,7 +45,6 @@ func NewAuthHandler(db *database.Database, rbacService *rbac.Service, settings S
 }
 
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
-	// Check if registration is open
 	if !h.Settings.IsRegistrationOpen(r.Context()) {
 		response.Error(w, http.StatusForbidden, "Registration is currently closed")
 		return
@@ -116,13 +115,11 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if email verification is required and user is not verified
 	if h.Settings.RequiresEmailVerification(r.Context()) && user.VerifiedAt == nil {
 		response.Error(w, http.StatusForbidden, "Please verify your email before signing in")
 		return
 	}
 
-	// Check if user is banned
 	if user.IsBanned {
 		response.Error(w, http.StatusForbidden, "Your account has been suspended")
 		return

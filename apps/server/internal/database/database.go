@@ -119,7 +119,6 @@ func (d *Database) createIndexes(ctx context.Context) error {
 		return err
 	}
 
-	// Tags indexes
 	_, err = d.Tags.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "name", Value: 1}},
 		Options: options.Index().SetUnique(true),
@@ -180,7 +179,6 @@ func (d *Database) createIndexes(ctx context.Context) error {
 		return err
 	}
 
-	// Chapters indexes
 	_, err = d.Chapters.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "series_id", Value: 1}},
 	})
@@ -203,7 +201,6 @@ func (d *Database) createIndexes(ctx context.Context) error {
 		return err
 	}
 
-	// Pages indexes
 	_, err = d.Pages.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "chapter_id", Value: 1}},
 	})
@@ -219,7 +216,6 @@ func (d *Database) createIndexes(ctx context.Context) error {
 		return err
 	}
 
-	// Bookmarks indexes
 	_, err = d.Bookmarks.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "user_id", Value: 1}, {Key: "series_id", Value: 1}},
 		Options: options.Index().SetUnique(true),
