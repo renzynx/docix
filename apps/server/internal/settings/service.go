@@ -258,6 +258,18 @@ func (s *Service) GetCDNBaseURL(ctx context.Context) string {
 	return settings.Integrations.CDNBaseURL
 }
 
+func (s *Service) GetMaxLoginAttempts(ctx context.Context) int {
+	settings, err := s.Get(ctx)
+	if err != nil {
+		log.Warnf("Failed to get settings for max login attempts: %v", err)
+		return 5 // Default to 5 attempts
+	}
+	if settings.Users.MaxLoginAttempts <= 0 {
+		return 0 // 0 means disabled
+	}
+	return settings.Users.MaxLoginAttempts
+}
+
 func (s *Service) getOrCreateFromDB(ctx context.Context) (*models.SiteSettings, error) {
 	var settings models.SiteSettings
 

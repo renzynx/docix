@@ -25,9 +25,19 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
 
+	// Global rate limiter with admin bypass
+	rateLimiter := middleware.NewRateLimiter(rbacService).
+		WithGlobalLimit(100, time.Minute).
+		WithRouteLimit("/auth/sign-up", 5, time.Minute, "Too many registration attempts").
+		WithRouteLimit("/auth/request-verification", 3, time.Minute, "Too many verification requests")
+
+	// Login-specific rate limiter using max_login_attempts from settings
+	loginRateLimiter := middleware.NewLoginRateLimiter(rbacService, settingsService)
+
 	r.Use(chimiddleware.StripSlashes)
 	r.Use(middleware.CORS())
 	r.Use(middleware.Maintenance(settingsService))
+	r.Use(rateLimiter.Middleware())
 
 	signer := signing.NewSigner(
 		cfg.CDN.HMACSecret,
@@ -36,6 +46,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	)
 
 	authHandler := handler.NewAuthHandler(db, rbacService, settingsService)
+	authHandler.SetLoginRateLimiter(loginRateLimiter)
 	adminHandler := handler.NewAdminHandler(db, rbacService, settingsService)
 	mangaHandler := handler.NewMangaHandler(db)
 	mangaAdminHandler := handler.NewMangaAdminHandler(db, signer, settingsService)
@@ -56,7 +67,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 
 	r.Route("/auth", func(router chi.Router) {
 		router.Post("/sign-up", authHandler.SignUp)
-		router.Post("/sign-in", authHandler.SignIn)
+		router.With(loginRateLimiter.Middleware()).Post("/sign-in", authHandler.SignIn)
 		router.Post("/sign-out", authHandler.SignOut)
 		router.Post("/verify-email", authHandler.VerifyEmail)
 

@@ -22,16 +22,24 @@ import (
 )
 
 type AuthHandler struct {
-	DB       *database.Database
-	RBAC     *rbac.Service
-	Redis    *goredis.Client
-	Settings SettingsProvider
+	DB               *database.Database
+	RBAC             *rbac.Service
+	Redis            *goredis.Client
+	Settings         SettingsProvider
+	LoginRateLimiter LoginRateLimiter
 }
 
 // This avoids import cycles with the settings package
 type SettingsProvider interface {
 	IsRegistrationOpen(ctx context.Context) bool
 	RequiresEmailVerification(ctx context.Context) bool
+	GetMaxLoginAttempts(ctx context.Context) int
+}
+
+// LoginRateLimiter interface for recording failed login attempts
+type LoginRateLimiter interface {
+	RecordFailedAttempt(ctx context.Context, ip string) error
+	ClearAttempts(ctx context.Context, ip string) error
 }
 
 func NewAuthHandler(db *database.Database, rbacService *rbac.Service, settings SettingsProvider) *AuthHandler {
@@ -41,6 +49,10 @@ func NewAuthHandler(db *database.Database, rbacService *rbac.Service, settings S
 		Redis:    redis.MustGetClient(),
 		Settings: settings,
 	}
+}
+
+func (h *AuthHandler) SetLoginRateLimiter(lrl LoginRateLimiter) {
+	h.LoginRateLimiter = lrl
 }
 
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -96,11 +108,13 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	clientIP := getClientIP(r)
 
 	var user models.User
 	err := h.DB.Users.FindOne(r.Context(), bson.M{"email": req.Email}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
+			h.recordFailedLogin(r.Context(), clientIP)
 			response.Error(w, http.StatusUnauthorized, "Invalid email or password")
 			return
 		}
@@ -110,6 +124,7 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		h.recordFailedLogin(r.Context(), clientIP)
 		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
@@ -124,6 +139,9 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Clear failed attempts on successful login
+	h.clearFailedLogin(r.Context(), clientIP)
+
 	sess, jwtToken, err := h.createSession(r, user.ID.Hex())
 	if err != nil {
 		log.Error("Failed to create session: ", err)
@@ -136,6 +154,41 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, models.AuthResponse{
 		Message: "Signed in successfully",
 	})
+}
+
+func (h *AuthHandler) recordFailedLogin(ctx context.Context, ip string) {
+	if h.LoginRateLimiter != nil {
+		if err := h.LoginRateLimiter.RecordFailedAttempt(ctx, ip); err != nil {
+			log.Warnf("Failed to record failed login attempt: %v", err)
+		}
+	}
+}
+
+func (h *AuthHandler) clearFailedLogin(ctx context.Context, ip string) {
+	if h.LoginRateLimiter != nil {
+		if err := h.LoginRateLimiter.ClearAttempts(ctx, ip); err != nil {
+			log.Warnf("Failed to clear login attempts: %v", err)
+		}
+	}
+}
+
+func getClientIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		return strings.TrimSpace(parts[0])
+	}
+
+	realIP := r.Header.Get("X-Real-IP")
+	if realIP != "" {
+		return realIP
+	}
+
+	ip := r.RemoteAddr
+	if colonIndex := strings.LastIndex(ip, ":"); colonIndex != -1 {
+		ip = ip[:colonIndex]
+	}
+	return ip
 }
 
 func (h *AuthHandler) SignOut(w http.ResponseWriter, r *http.Request) {
