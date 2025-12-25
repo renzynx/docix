@@ -28,7 +28,6 @@ type AuthHandler struct {
 	Settings SettingsProvider
 }
 
-// SettingsProvider defines the interface for settings access
 // This avoids import cycles with the settings package
 type SettingsProvider interface {
 	IsRegistrationOpen(ctx context.Context) bool

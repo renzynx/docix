@@ -17,7 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-// CDNSettingsProvider defines the interface for CDN settings access
 type CDNSettingsProvider interface {
 	IsCDNEnabled(ctx context.Context) bool
 	GetCDNBaseURL(ctx context.Context) string

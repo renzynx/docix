@@ -13,6 +13,9 @@ const (
 
 	// TypeImageDelete deletes an image file (future)
 	TypeImageDelete = "image:delete"
+
+	// TypeCleanupOrphans removes files not referenced in database
+	TypeCleanupOrphans = "cleanup:orphans"
 )
 
 // Queue names

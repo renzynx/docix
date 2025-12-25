@@ -6,7 +6,6 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-// ImageConvertPayload is the payload for image conversion tasks
 type ImageConvertPayload struct {
 	UploadID         string `json:"upload_id"`
 	SourcePath       string `json:"source_path"`
@@ -18,7 +17,6 @@ type ImageConvertPayload struct {
 	MaxHeight        int    `json:"max_height,omitempty"`
 }
 
-// ImageThumbnailPayload is the payload for thumbnail generation tasks
 type ImageThumbnailPayload struct {
 	UploadID   string `json:"upload_id"`
 	SourcePath string `json:"source_path"`
@@ -28,7 +26,6 @@ type ImageThumbnailPayload struct {
 	Quality    int    `json:"quality"`
 }
 
-// NewImageConvertTask creates a new image conversion task
 func NewImageConvertTask(payload ImageConvertPayload) (*asynq.Task, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -37,7 +34,6 @@ func NewImageConvertTask(payload ImageConvertPayload) (*asynq.Task, error) {
 	return asynq.NewTask(TypeImageConvert, data), nil
 }
 
-// NewImageThumbnailTask creates a new thumbnail generation task
 func NewImageThumbnailTask(payload ImageThumbnailPayload) (*asynq.Task, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -46,7 +42,6 @@ func NewImageThumbnailTask(payload ImageThumbnailPayload) (*asynq.Task, error) {
 	return asynq.NewTask(TypeImageThumbnail, data), nil
 }
 
-// ParseImageConvertPayload parses the payload from a task
 func ParseImageConvertPayload(task *asynq.Task) (*ImageConvertPayload, error) {
 	var payload ImageConvertPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -55,7 +50,6 @@ func ParseImageConvertPayload(task *asynq.Task) (*ImageConvertPayload, error) {
 	return &payload, nil
 }
 
-// ParseImageThumbnailPayload parses the payload from a task
 func ParseImageThumbnailPayload(task *asynq.Task) (*ImageThumbnailPayload, error) {
 	var payload ImageThumbnailPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {

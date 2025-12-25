@@ -9,6 +9,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/renzynx/docix/apps/worker/internal/config"
+	"github.com/renzynx/docix/apps/worker/internal/database"
 	"github.com/renzynx/docix/apps/worker/internal/handlers"
 	"github.com/renzynx/docix/apps/worker/internal/processor"
 	"github.com/renzynx/docix/apps/worker/internal/tasks"
@@ -33,10 +34,11 @@ func main() {
 
 	cfg := config.Load()
 	log.WithFields(logrus.Fields{
-		"redis_addr":  cfg.RedisAddr,
-		"concurrency": cfg.Concurrency,
-		"upload_dir":  cfg.UploadDir,
-		"pending_dir": cfg.PendingUploadDir,
+		"redis_addr":   cfg.RedisAddr,
+		"mongo_url":    cfg.MongoURL,
+		"concurrency":  cfg.Concurrency,
+		"upload_dir":   cfg.UploadDir,
+		"pending_dir":  cfg.PendingUploadDir,
 		"webp_quality": cfg.WebPQuality,
 	}).Info("Configuration loaded")
 
@@ -54,6 +56,13 @@ func main() {
 	cancel()
 	log.Info("Redis connection established")
 
+	db, err := database.New(cfg.MongoURL)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to connect to MongoDB")
+	}
+	defer db.Disconnect(context.Background())
+	log.Info("MongoDB connection established")
+
 	if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
 		log.WithError(err).Fatal("Failed to create upload directory")
 	}
@@ -65,6 +74,7 @@ func main() {
 	log.Info("Image processor initialized")
 
 	imageHandler := handlers.NewImageHandler(imgProcessor, redisClient, logger)
+	cleanupHandler := handlers.NewCleanupHandler(db, cfg, redisClient, logger)
 
 	redisOpt := asynq.RedisClientOpt{
 		Addr:     cfg.RedisAddr,
@@ -93,6 +103,7 @@ func main() {
 	mux.Use(loggingMiddleware(logger))
 	mux.Handle(tasks.TypeImageConvert, imageHandler)
 	mux.Handle(tasks.TypeImageThumbnail, imageHandler)
+	mux.Handle(tasks.TypeCleanupOrphans, cleanupHandler)
 
 	go func() {
 		sigChan := make(chan os.Signal, 1)

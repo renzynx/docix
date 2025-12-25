@@ -12,6 +12,8 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 
+	MongoURL string
+
 	Concurrency int
 
 	Queues map[string]int
@@ -25,10 +27,10 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		RedisAddr:        "localhost:6379",
-		RedisPassword:    "",
-		RedisDB:          0,
-		Concurrency:      10,
+		RedisAddr:     "localhost:6379",
+		RedisPassword: "",
+		RedisDB:       0,
+		Concurrency:   10,
 		Queues: map[string]int{
 			"critical": 6,
 			"default":  3,
@@ -63,6 +65,8 @@ func Load() *Config {
 			cfg.RedisDB = db
 		}
 	}
+
+	cfg.MongoURL = os.Getenv("MONGO_URL")
 
 	if concStr := os.Getenv("WORKER_CONCURRENCY"); concStr != "" {
 		if conc, err := strconv.Atoi(concStr); err == nil && conc > 0 {

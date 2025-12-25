@@ -10,7 +10,6 @@ import (
 	"github.com/renzynx/docix/server/internal/database"
 )
 
-// CDNAdminSettingsProvider defines the interface for CDN settings in admin handler
 type CDNAdminSettingsProvider interface {
 	IsCDNEnabled(ctx context.Context) bool
 	GetCDNBaseURL(ctx context.Context) string

@@ -21,7 +21,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ContentSettingsProvider defines the interface for content settings access
 type ContentSettingsProvider interface {
 	GetMaxUploadSizeMB(ctx context.Context) int
 	GetAllowedImageTypes(ctx context.Context) string
@@ -48,7 +47,6 @@ func NewUploadHandler(db *database.Database, cfg *config.Config, settings Conten
 	}
 }
 
-// getMaxFileSize returns the max file size in bytes from settings (with config fallback)
 func (h *UploadHandler) getMaxFileSize(ctx context.Context) int64 {
 	if h.settings != nil {
 		sizeMB := h.settings.GetMaxUploadSizeMB(ctx)
@@ -59,7 +57,6 @@ func (h *UploadHandler) getMaxFileSize(ctx context.Context) int64 {
 	return h.config.Upload.MaxFileSize
 }
 
-// isAllowedFormat checks if the detected format is in the allowed list from settings
 func (h *UploadHandler) isAllowedFormat(ctx context.Context, format string) bool {
 	if h.settings == nil {
 		return format != ""

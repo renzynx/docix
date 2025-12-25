@@ -13,6 +13,7 @@ import (
 const (
 	TypeImageConvert   = "image:convert"
 	TypeImageThumbnail = "image:thumbnail"
+	TypeCleanupOrphans = "cleanup:orphans"
 )
 
 const (
@@ -41,16 +42,16 @@ var (
 func GetClient() (*asynq.Client, error) {
 	clientOnce.Do(func() {
 		cfg := redis.LoadConfig()
-		
+
 		redisOpt := asynq.RedisClientOpt{
 			Addr:     cfg.Addr,
 			Password: cfg.Password,
 			DB:       cfg.DB,
 		}
-		
+
 		client = asynq.NewClient(redisOpt)
 	})
-	
+
 	return client, clientErr
 }
 
@@ -73,7 +74,7 @@ func EnqueueImageConvert(payload ImageConvertPayload) (*asynq.TaskInfo, error) {
 	}
 
 	task := asynq.NewTask(TypeImageConvert, data)
-	
+
 	return c.Enqueue(
 		task,
 		asynq.Queue(QueueDefault),
@@ -94,11 +95,27 @@ func EnqueueImageConvertCritical(payload ImageConvertPayload) (*asynq.TaskInfo, 
 	}
 
 	task := asynq.NewTask(TypeImageConvert, data)
-	
+
 	return c.Enqueue(
 		task,
 		asynq.Queue(QueueCritical),
 		asynq.MaxRetry(5),
 		asynq.Timeout(5*time.Minute),
+	)
+}
+
+func EnqueueCleanupOrphans() (*asynq.TaskInfo, error) {
+	c, err := GetClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get queue client: %w", err)
+	}
+
+	task := asynq.NewTask(TypeCleanupOrphans, nil)
+
+	return c.Enqueue(
+		task,
+		asynq.Queue(QueueLow),
+		asynq.MaxRetry(1),
+		asynq.Timeout(10*time.Minute),
 	)
 }
