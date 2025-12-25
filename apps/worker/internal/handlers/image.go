@@ -45,10 +45,10 @@ func (h *ImageHandler) handleImageConvert(ctx context.Context, t *asynq.Task) er
 	}
 
 	log := h.logger.WithFields(logrus.Fields{
-		"upload_id":   payload.UploadID,
-		"source":      payload.SourcePath,
-		"target":      payload.TargetPath,
-		"format":      payload.TargetFormat,
+		"upload_id": payload.UploadID,
+		"source":    payload.SourcePath,
+		"target":    payload.TargetPath,
+		"format":    payload.TargetFormat,
 	})
 
 	log.Info("Starting image conversion")
@@ -71,18 +71,22 @@ func (h *ImageHandler) handleImageConvert(ctx context.Context, t *asynq.Task) er
 		if statusErr := h.updateUploadStatus(ctx, payload.UploadID, "failed", err.Error()); statusErr != nil {
 			log.WithError(statusErr).Warn("Failed to update status to failed")
 		}
+		// Clean up source file on failure to prevent orphans in pending directory
+		if removeErr := os.Remove(payload.SourcePath); removeErr != nil {
+			log.WithError(removeErr).Warn("Failed to delete source file after conversion failure")
+		}
 		return fmt.Errorf("image conversion failed: %w", err)
 	}
 
 	elapsed := time.Since(start)
 
 	log.WithFields(logrus.Fields{
-		"elapsed_ms":     elapsed.Milliseconds(),
-		"original_size":  result.OriginalSize,
-		"output_size":    result.OutputSize,
-		"output_width":   result.Width,
-		"output_height":  result.Height,
-		"compression":    fmt.Sprintf("%.1f%%", float64(result.OutputSize)/float64(result.OriginalSize)*100),
+		"elapsed_ms":    elapsed.Milliseconds(),
+		"original_size": result.OriginalSize,
+		"output_size":   result.OutputSize,
+		"output_width":  result.Width,
+		"output_height": result.Height,
+		"compression":   fmt.Sprintf("%.1f%%", float64(result.OutputSize)/float64(result.OriginalSize)*100),
 	}).Info("Image conversion completed")
 
 	if err := h.updateUploadStatusWithResult(ctx, payload.UploadID, result); err != nil {

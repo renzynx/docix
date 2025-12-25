@@ -2,23 +2,12 @@ package tasks
 
 // Task type constants
 const (
-	// TypeImageConvert converts an uploaded image to WebP format
-	TypeImageConvert = "image:convert"
-
-	// TypeImageThumbnail generates a thumbnail for an image (future)
+	TypeImageConvert   = "image:convert"
 	TypeImageThumbnail = "image:thumbnail"
-
-	// TypeImageOptimize re-optimizes an existing image (future)
-	TypeImageOptimize = "image:optimize"
-
-	// TypeImageDelete deletes an image file (future)
-	TypeImageDelete = "image:delete"
-
-	// TypeCleanupOrphans removes files not referenced in database
+	TypeImageOptimize  = "image:optimize"
+	TypeImageDelete    = "image:delete"
 	TypeCleanupOrphans = "cleanup:orphans"
-
-	// TypeViewSync syncs view counts from Redis to MongoDB
-	TypeViewSync = "views:sync"
+	TypeViewSync       = "views:sync"
 )
 
 // Queue names

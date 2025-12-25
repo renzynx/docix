@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
@@ -44,10 +45,52 @@ func (h *CleanupHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 
 func (h *CleanupHandler) handleCleanupOrphans(ctx context.Context, t *asynq.Task) error {
 	uploadDir := h.config.UploadDir
+	pendingDir := h.config.PendingUploadDir
 
+	// Clean up orphaned files in the main upload directory
+	uploadDeletedCount, uploadReclaimedSpace, err := h.cleanupUploadDirectory(ctx, uploadDir)
+	if err != nil {
+		return err
+	}
+
+	// Clean up stale files in the pending directory (files that failed processing)
+	pendingDeletedCount, pendingReclaimedSpace := h.cleanupPendingDirectory(pendingDir)
+
+	totalDeleted := uploadDeletedCount + pendingDeletedCount
+	totalReclaimed := uploadReclaimedSpace + pendingReclaimedSpace
+
+	h.logger.WithFields(logrus.Fields{
+		"upload_deleted":  uploadDeletedCount,
+		"pending_deleted": pendingDeletedCount,
+		"total_deleted":   totalDeleted,
+		"reclaimed_bytes": totalReclaimed,
+	}).Info("Cleanup completed")
+
+	resultData := map[string]any{
+		"upload_deleted":  uploadDeletedCount,
+		"pending_deleted": pendingDeletedCount,
+		"total_deleted":   totalDeleted,
+		"reclaimed_bytes": totalReclaimed,
+	}
+
+	resultJSON, err := json.Marshal(resultData)
+	if err != nil {
+		h.logger.Warnf("Failed to marshal result: %v", err)
+		return nil
+	}
+
+	if _, err := t.ResultWriter().Write(resultJSON); err != nil {
+		h.logger.Warnf("Failed to write task result: %v", err)
+	}
+
+	return nil
+}
+
+// cleanupUploadDirectory removes files in the upload directory that are not referenced in the database
+func (h *CleanupHandler) cleanupUploadDirectory(ctx context.Context, uploadDir string) (int, int64, error) {
 	files, err := os.ReadDir(uploadDir)
 	if err != nil {
-		return fmt.Errorf("failed to read upload directory: %w", err)
+		return 0, 0, fmt.Errorf("failed to read upload directory: %w", err)
 	}
 
 	diskFiles := make(map[string]bool)
@@ -61,7 +104,7 @@ func (h *CleanupHandler) handleCleanupOrphans(ctx context.Context, t *asynq.Task
 
 	seriesCursor, err := h.db.Series().Find(ctx, bson.M{}, options.Find().SetProjection(bson.M{"cover_image": 1}))
 	if err != nil {
-		return fmt.Errorf("failed to list series: %w", err)
+		return 0, 0, fmt.Errorf("failed to list series: %w", err)
 	}
 	defer seriesCursor.Close(ctx)
 
@@ -76,7 +119,7 @@ func (h *CleanupHandler) handleCleanupOrphans(ctx context.Context, t *asynq.Task
 
 	pageCursor, err := h.db.Pages().Find(ctx, bson.M{}, options.Find().SetProjection(bson.M{"image_url": 1}))
 	if err != nil {
-		return fmt.Errorf("failed to list pages: %w", err)
+		return 0, 0, fmt.Errorf("failed to list pages: %w", err)
 	}
 	defer pageCursor.Close(ctx)
 
@@ -107,27 +150,48 @@ func (h *CleanupHandler) handleCleanupOrphans(ctx context.Context, t *asynq.Task
 		}
 	}
 
-	h.logger.WithFields(logrus.Fields{
-		"deleted_count":   deletedCount,
-		"reclaimed_bytes": reclaimedSpace,
-		"total_files":     len(diskFiles),
-	}).Info("Cleanup completed")
+	return deletedCount, reclaimedSpace, nil
+}
 
-	resultData := map[string]any{
-		"deleted_count":   deletedCount,
-		"reclaimed_bytes": reclaimedSpace,
-		"total_files":     len(diskFiles),
+// cleanupPendingDirectory removes stale files in the pending directory that are older than 1 hour
+// (files should be processed within seconds, so 1 hour is generous for failed tasks)
+func (h *CleanupHandler) cleanupPendingDirectory(pendingDir string) (int, int64) {
+	if pendingDir == "" {
+		return 0, 0
 	}
 
-	resultJSON, err := json.Marshal(resultData)
+	files, err := os.ReadDir(pendingDir)
 	if err != nil {
-		h.logger.Warnf("Failed to marshal result: %v", err)
-		return nil
+		h.logger.Warnf("Failed to read pending directory: %v", err)
+		return 0, 0
 	}
 
-	if _, err := t.ResultWriter().Write(resultJSON); err != nil {
-		h.logger.Warnf("Failed to write task result: %v", err)
+	deletedCount := 0
+	reclaimedSpace := int64(0)
+	staleThreshold := time.Now().Add(-1 * time.Hour)
+
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		path := filepath.Join(pendingDir, f.Name())
+		info, err := os.Stat(path)
+		if err != nil {
+			continue
+		}
+
+		// Only delete files older than the stale threshold
+		if info.ModTime().Before(staleThreshold) {
+			reclaimedSpace += info.Size()
+			if err := os.Remove(path); err != nil {
+				h.logger.Warnf("Failed to delete stale pending file %s: %v", f.Name(), err)
+				continue
+			}
+			deletedCount++
+			h.logger.Debugf("Deleted stale pending file: %s (age: %v)", f.Name(), time.Since(info.ModTime()))
+		}
 	}
 
-	return nil
+	return deletedCount, reclaimedSpace
 }
