@@ -16,10 +16,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// Server start time for uptime calculation
 var serverStartTime = time.Now()
 
-// GetSiteSettings returns the current site settings
 func (h *AdminHandler) GetSiteSettings(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -33,7 +31,6 @@ func (h *AdminHandler) GetSiteSettings(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, settings)
 }
 
-// UpdateSiteSettings updates site settings
 func (h *AdminHandler) UpdateSiteSettings(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -42,7 +39,6 @@ func (h *AdminHandler) UpdateSiteSettings(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Get current settings to merge integrations
 	currentSettings, err := h.Settings.Get(ctx)
 	if err != nil {
 		log.Error("Failed to get current settings: ", err)
@@ -96,7 +92,6 @@ func (h *AdminHandler) UpdateSiteSettings(w http.ResponseWriter, r *http.Request
 		updates["integrations"] = integ
 	}
 
-	// Use the settings service to update (this also updates the cache)
 	updatedSettings, err := h.Settings.Update(ctx, updates)
 	if err != nil {
 		log.Error("Failed to update site settings: ", err)
@@ -107,7 +102,6 @@ func (h *AdminHandler) UpdateSiteSettings(w http.ResponseWriter, r *http.Request
 	response.JSON(w, http.StatusOK, updatedSettings)
 }
 
-// PerformMaintenanceAction executes a maintenance action
 func (h *AdminHandler) PerformMaintenanceAction(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -135,7 +129,6 @@ func (h *AdminHandler) PerformMaintenanceAction(w http.ResponseWriter, r *http.R
 	response.JSON(w, http.StatusOK, result)
 }
 
-// GetSystemInfo returns system status information
 func (h *AdminHandler) GetSystemInfo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -176,7 +169,6 @@ func (h *AdminHandler) GetSystemInfo(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, systemInfo)
 }
 
-// clearCache clears Redis cache
 func (h *AdminHandler) clearCache(ctx context.Context) models.MaintenanceActionResponse {
 	redisClient, err := redis.GetClient()
 	if err != nil {
@@ -193,7 +185,6 @@ func (h *AdminHandler) clearCache(ctx context.Context) models.MaintenanceActionR
 		}
 	}
 
-	// Reload settings into cache after flush
 	if err := h.Settings.Load(ctx); err != nil {
 		log.Warnf("Failed to reload settings after cache clear: %v", err)
 	}
@@ -204,7 +195,6 @@ func (h *AdminHandler) clearCache(ctx context.Context) models.MaintenanceActionR
 	}
 }
 
-// clearAllSessions removes all user sessions
 func (h *AdminHandler) clearAllSessions(ctx context.Context) models.MaintenanceActionResponse {
 	result, err := h.DB.Sessions.DeleteMany(ctx, bson.M{})
 	if err != nil {
@@ -220,7 +210,6 @@ func (h *AdminHandler) clearAllSessions(ctx context.Context) models.MaintenanceA
 	}
 }
 
-// invalidateSettingsCache forces a reload of settings from database
 func (h *AdminHandler) invalidateSettingsCache(ctx context.Context) models.MaintenanceActionResponse {
 	if err := h.Settings.InvalidateCache(ctx); err != nil {
 		return models.MaintenanceActionResponse{
@@ -229,7 +218,6 @@ func (h *AdminHandler) invalidateSettingsCache(ctx context.Context) models.Maint
 		}
 	}
 
-	// Reload settings
 	if err := h.Settings.Load(ctx); err != nil {
 		return models.MaintenanceActionResponse{
 			Success: false,
@@ -243,7 +231,6 @@ func (h *AdminHandler) invalidateSettingsCache(ctx context.Context) models.Maint
 	}
 }
 
-// testEmail sends a test email to verify SMTP configuration
 func (h *AdminHandler) testEmail(ctx context.Context) models.MaintenanceActionResponse {
 	settings, err := h.Settings.Get(ctx)
 	if err != nil {
@@ -267,14 +254,13 @@ func (h *AdminHandler) testEmail(ctx context.Context) models.MaintenanceActionRe
 		}
 	}
 
-	// TODO: Actually send test email using the settings
+	// TODO: Actually send test email using the settings service
 	return models.MaintenanceActionResponse{
 		Success: true,
 		Message: "SMTP configuration appears valid (email sending not yet implemented)",
 	}
 }
 
-// parseRedisMemory extracts used_memory_human from Redis INFO output
 func parseRedisMemory(info string) string {
 	for _, line := range strings.Split(info, "\n") {
 		if strings.HasPrefix(line, "used_memory_human:") {
@@ -284,7 +270,6 @@ func parseRedisMemory(info string) string {
 	return "unknown"
 }
 
-// getUptime returns the server uptime as a human-readable string
 func getUptime() string {
 	uptime := time.Since(serverStartTime)
 	days := int(uptime.Hours() / 24)

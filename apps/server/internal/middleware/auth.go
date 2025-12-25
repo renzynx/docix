@@ -52,7 +52,6 @@ func Auth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Get session from Redis
 			sess, err := getSession(r.Context(), redisClient, claims.SessionID)
 			if err != nil {
 				response.Error(w, http.StatusInternalServerError, "Session lookup failed")
@@ -63,7 +62,6 @@ func Auth(db *database.Database) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Get user from database
 			userID, err := bson.ObjectIDFromHex(sess.UserID)
 			if err != nil {
 				response.Error(w, http.StatusUnauthorized, "Invalid session")

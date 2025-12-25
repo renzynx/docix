@@ -193,7 +193,7 @@ type Series struct {
 	Slug          string          `bson:"slug" json:"slug"`
 	Description   string          `bson:"description,omitempty" json:"description,omitempty"`
 	CoverImage    string          `bson:"cover_image,omitempty" json:"cover_image,omitempty"`
-	CoverImageURL string          `bson:"-" json:"cover_image_url,omitempty"` // Signed URL (not stored in DB)
+	CoverImageURL string          `bson:"-" json:"cover_image_url,omitempty"`
 	Author        string          `bson:"author,omitempty" json:"author,omitempty"`
 	Artist        string          `bson:"artist,omitempty" json:"artist,omitempty"`
 	Status        SeriesStatus    `bson:"status" json:"status"`
@@ -221,7 +221,7 @@ type Page struct {
 	ChapterID      bson.ObjectID `bson:"chapter_id" json:"chapter_id"`
 	Number         int           `bson:"number" json:"number"`
 	ImageURL       string        `bson:"image_url" json:"image_url"`
-	ImageURLSigned string        `bson:"-" json:"image_url_signed,omitempty"` // Signed URL (not stored in DB)
+	ImageURLSigned string        `bson:"-" json:"image_url_signed,omitempty"`
 	CreatedAt      time.Time     `bson:"created_at" json:"created_at"`
 }
 
@@ -307,7 +307,7 @@ type CreatePagesRequest struct {
 
 type CreatePageItem struct {
 	Number   int    `json:"number" validate:"required,min=1"`
-	ImageURL string `json:"image_url" validate:"required"` // Filename only (e.g., "uuid.webp")
+	ImageURL string `json:"image_url" validate:"required"`
 }
 
 type UpdatePageRequest struct {
@@ -377,48 +377,37 @@ type ChapterReader struct {
 	NextChapter   *ChapterNav `json:"next_chapter,omitempty"`
 }
 
-// DashboardStats provides aggregate statistics for the admin dashboard
 type DashboardStats struct {
-	// Core counts
 	TotalUsers    int64 `json:"total_users"`
 	TotalSeries   int64 `json:"total_series"`
 	TotalChapters int64 `json:"total_chapters"`
 	TotalViews    int64 `json:"total_views"`
 
-	// User breakdown
 	VerifiedUsers int64 `json:"verified_users"`
 	BannedUsers   int64 `json:"banned_users"`
 
-	// Series by status for pie chart
 	SeriesByStatus map[string]int64 `json:"series_by_status"`
 
-	// Time-series data for charts (last 7 days)
 	UserRegistrations []DailyCount `json:"user_registrations"`
 	ChapterUploads    []DailyCount `json:"chapter_uploads"`
 
-	// Top content
 	TopSeriesByViews []SeriesViewCount `json:"top_series_by_views"`
 
-	// Recent activity
 	RecentSeries []Series `json:"recent_series"`
 	RecentUsers  []User   `json:"recent_users"`
 }
 
-// DailyCount represents a count for a specific date
 type DailyCount struct {
-	Date  string `json:"date"` // YYYY-MM-DD format
+	Date  string `json:"date"`
 	Count int64  `json:"count"`
 }
 
-// SeriesViewCount represents a series with its view count for ranking
 type SeriesViewCount struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
 	ViewCount int64  `json:"view_count"`
 }
 
-// SiteSettings stores all configurable site settings
-// There should only be one document in the settings collection
 type SiteSettings struct {
 	ID           bson.ObjectID      `bson:"_id,omitempty" json:"id"`
 	Site         SiteConfig         `bson:"site" json:"site"`

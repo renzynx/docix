@@ -8,29 +8,14 @@ import (
 
 // ImageConvertPayload is the payload for image conversion tasks
 type ImageConvertPayload struct {
-	// UploadID is the unique identifier for tracking this upload
-	UploadID string `json:"upload_id"`
-
-	// SourcePath is the path to the original uploaded file
-	SourcePath string `json:"source_path"`
-
-	// TargetPath is the path where the converted file should be saved
-	TargetPath string `json:"target_path"`
-
-	// OriginalFilename is the original name of the uploaded file
+	UploadID         string `json:"upload_id"`
+	SourcePath       string `json:"source_path"`
+	TargetPath       string `json:"target_path"`
 	OriginalFilename string `json:"original_filename"`
-
-	// TargetFormat is the desired output format (webp, avif, etc.)
-	TargetFormat string `json:"target_format"`
-
-	// Quality is the output quality (1-100)
-	Quality int `json:"quality"`
-
-	// MaxWidth is the maximum width (0 = no resize)
-	MaxWidth int `json:"max_width,omitempty"`
-
-	// MaxHeight is the maximum height (0 = no resize)
-	MaxHeight int `json:"max_height,omitempty"`
+	TargetFormat     string `json:"target_format"`
+	Quality          int    `json:"quality"`
+	MaxWidth         int    `json:"max_width,omitempty"`
+	MaxHeight        int    `json:"max_height,omitempty"`
 }
 
 // ImageThumbnailPayload is the payload for thumbnail generation tasks

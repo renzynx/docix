@@ -50,7 +50,6 @@ func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get total views from series
 	var totalViews int64
 	viewsPipeline := mongo.Pipeline{
 		{{Key: "$group", Value: bson.M{"_id": nil, "total": bson.M{"$sum": "$view_count"}}}},
@@ -68,7 +67,6 @@ func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Get series by status
 	seriesByStatus := make(map[string]int64)
 	statusPipeline := mongo.Pipeline{
 		{{Key: "$group", Value: bson.M{"_id": "$status", "count": bson.M{"$sum": 1}}}},
@@ -87,7 +85,6 @@ func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Get recent series (last 5)
 	var recentSeries []models.Series
 	recentSeriesCursor, err := h.DB.Series.Find(ctx, bson.M{},
 		options.Find().
@@ -99,7 +96,6 @@ func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request)
 		_ = recentSeriesCursor.All(ctx, &recentSeries)
 	}
 
-	// Get recent users (last 5)
 	var recentUsers []models.User
 	recentUsersCursor, err := h.DB.Users.Find(ctx, bson.M{},
 		options.Find().
@@ -111,13 +107,10 @@ func (h *AdminHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request)
 		_ = recentUsersCursor.All(ctx, &recentUsers)
 	}
 
-	// Get user registrations for last 7 days
 	userRegistrations := h.getDailyCounts(ctx, h.DB.Users, 7)
 
-	// Get chapter uploads for last 7 days
 	chapterUploads := h.getDailyCounts(ctx, h.DB.Chapters, 7)
 
-	// Get top 5 series by views
 	topSeriesByViews := h.getTopSeriesByViews(ctx, 5)
 
 	stats := models.DashboardStats{
