@@ -3,9 +3,9 @@
 
 import type {
 	AssignRoleRequest,
+	AsyncUploadResponse,
 	AuthResponse,
 	BanUserRequest,
-	BulkUploadResponse,
 	ChangePasswordRequest,
 	Chapter,
 	ChapterReader,
@@ -15,6 +15,7 @@ import type {
 	CreateRoleRequest,
 	CreateSeriesRequest,
 	CreateTagRequest,
+	DashboardStats,
 	PaginatedResponse,
 	ReorderPagesRequest,
 	RevokeSessionRequest,
@@ -31,7 +32,7 @@ import type {
 	UpdateSeriesRequest,
 	UpdateTagRequest,
 	UpdateUserRequest,
-	UploadResponse,
+	UploadStatusResponse,
 	User,
 	VerifyEmailRequest,
 } from "@docix/types";
@@ -119,6 +120,8 @@ export const queryKeys = {
 	chapterDetail: (slug: string) => ["manga", "chapters", "chapterDetail", slug] as const,
 	tags: ["tags"] as const,
 	adminPermissions: ["admin", "permissions"] as const,
+	adminDashboardStats: ["admin", "stats"] as const,
+	adminUploadStatusDetail: (id: string) => ["admin", "upload", "status", "adminUploadStatusDetail", id] as const,
 	adminRoles: ["admin", "roles"] as const,
 	adminRoleDetail: (id: string) => ["admin", "roles", "adminRoleDetail", id] as const,
 	adminUsers: ["admin", "users"] as const,
@@ -233,6 +236,25 @@ export const adminGetPermissionsQueryOptions = (config?: AxiosRequestConfig) =>
 			const { data } = await api.get<string[]>("/admin/permissions", config);
 			return data;
 		},
+	});
+
+export const adminGetDashboardStatsQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminDashboardStats,
+		queryFn: async () => {
+			const { data } = await api.get<DashboardStats>("/admin/stats", config);
+			return data;
+		},
+	});
+
+export const adminGetUploadStatusQueryOptions = (id: string, config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminUploadStatusDetail(id),
+		queryFn: async () => {
+			const { data } = await api.get<UploadStatusResponse>(`/admin/upload/${id}/status`, config);
+			return data;
+		},
+		enabled: !!id,
 	});
 
 export const adminListRolesQueryOptions = (config?: AxiosRequestConfig) =>
@@ -371,12 +393,17 @@ export const incrementChapterView = async (id: string, config?: AxiosRequestConf
 };
 
 export const adminUploadFile = async (config?: AxiosRequestConfig) => {
-	const { data } = await api.post<UploadResponse>("/admin/upload", undefined, config);
+	const { data } = await api.post<AsyncUploadResponse>("/admin/upload", undefined, config);
 	return data;
 };
 
 export const adminUploadMultipleFiles = async (config?: AxiosRequestConfig) => {
-	const { data } = await api.post<BulkUploadResponse>("/admin/upload/bulk", undefined, config);
+	const { data } = await api.post<MessageResponse>("/admin/upload/bulk", undefined, config);
+	return data;
+};
+
+export const adminCleanOrphanedFiles = async (config?: AxiosRequestConfig) => {
+	const { data } = await api.delete<MessageResponse>("/admin/upload/cleanup", config);
 	return data;
 };
 
@@ -547,6 +574,11 @@ export const adminUploadFileMutationOptions = (config?: AxiosRequestConfig) =>
 export const adminUploadMultipleFilesMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: () => adminUploadMultipleFiles(config),
+	});
+
+export const adminCleanOrphanedFilesMutationOptions = (config?: AxiosRequestConfig) =>
+	mutationOptions({
+		mutationFn: () => adminCleanOrphanedFiles(config),
 	});
 
 export const adminCreateRoleMutationOptions = (config?: AxiosRequestConfig) =>

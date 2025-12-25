@@ -3,11 +3,6 @@ import { cache } from "react";
 import { api } from "./api.generated";
 import { getRequestHeaders } from "./tanstack-query/server";
 
-/**
- * Cached server-side data fetching functions.
- * Use React's cache() to deduplicate requests between generateMetadata and page components.
- */
-
 export const getSeriesBySlug = cache(async (slug: string) => {
 	const headers = await getRequestHeaders();
 	const { data } = await api.get<SeriesWithChapters>(`/manga/${slug}`, {

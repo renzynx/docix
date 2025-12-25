@@ -1,10 +1,10 @@
+import type { SeriesWithChapters } from "@docix/types";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getQueryClient, HydrateClient } from "@/lib/tanstack-query/server";
-import { getSeriesBySlug } from "@/lib/api.server";
 import { queryKeys } from "@/lib/api.generated";
+import { getSeriesBySlug } from "@/lib/api.server";
+import { getQueryClient, HydrateClient } from "@/lib/tanstack-query/server";
 import { SeriesDetail } from "./_components/series-detail";
-import type { SeriesWithChapters } from "@docix/types";
 
 interface PageProps {
 	params: Promise<{ slug: string }>;
