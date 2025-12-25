@@ -13,28 +13,34 @@ import (
 	"github.com/renzynx/docix/server/internal/config"
 	"github.com/renzynx/docix/server/internal/database"
 	"github.com/renzynx/docix/server/internal/rbac"
+	"github.com/renzynx/docix/server/internal/settings"
 	log "github.com/sirupsen/logrus"
 )
 
 type Server struct {
-	httpServer  *http.Server
-	router      *chi.Mux
-	db          *database.Database
-	rbacService *rbac.Service
-	cfg         *config.Config
+	httpServer      *http.Server
+	router          *chi.Mux
+	db              *database.Database
+	rbacService     *rbac.Service
+	settingsService *settings.Service
+	cfg             *config.Config
 }
 
 func New(db *database.Database, rbacService *rbac.Service, cfg *config.Config) *Server {
 	router := chi.NewRouter()
 
+	// Initialize settings service
+	settingsService := settings.NewService(db)
+
 	s := &Server{
-		router:      router,
-		db:          db,
-		rbacService: rbacService,
-		cfg:         cfg,
+		router:          router,
+		db:              db,
+		rbacService:     rbacService,
+		settingsService: settingsService,
+		cfg:             cfg,
 	}
 
-	SetupRoutes(router, db, rbacService)
+	SetupRoutes(router, db, rbacService, settingsService)
 
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
@@ -48,6 +54,12 @@ func New(db *database.Database, rbacService *rbac.Service, cfg *config.Config) *
 }
 
 func (s *Server) Run() error {
+	// Load settings on startup
+	ctx := context.Background()
+	if err := s.settingsService.Load(ctx); err != nil {
+		log.Warnf("Failed to load settings on startup: %v", err)
+	}
+
 	serverErrors := make(chan error, 1)
 
 	go func() {

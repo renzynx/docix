@@ -13,20 +13,22 @@ export default function UsersPage() {
 	const [banDialogUser, setBanDialogUser] = useState<User | null>(null);
 	const [rolesDialogUser, setRolesDialogUser] = useState<User | null>(null);
 
-	const { data: users, isLoading } = useQuery(adminListUsersQueryOptions());
+	const { data: usersResponse, isLoading } = useQuery(
+		adminListUsersQueryOptions(),
+	);
 
 	// Filter users based on search query
 	const filteredUsers = useMemo(() => {
-		if (!users) return [];
-		if (!searchQuery.trim()) return users;
+		if (!usersResponse?.data) return [];
+		if (!searchQuery.trim()) return usersResponse.data;
 
 		const query = searchQuery.toLowerCase();
-		return users.filter(
+		return usersResponse.data.filter(
 			(user) =>
 				user.email.toLowerCase().includes(query) ||
 				user.username?.toLowerCase().includes(query),
 		);
-	}, [users, searchQuery]);
+	}, [usersResponse, searchQuery]);
 
 	return (
 		<div className="space-y-8">
@@ -45,9 +47,9 @@ export default function UsersPage() {
 					onChange={(e) => setSearchQuery(e.target.value)}
 					className="max-w-sm"
 				/>
-				{users && (
+				{usersResponse && (
 					<span className="text-sm text-muted-foreground">
-						{filteredUsers.length} of {users.length} users
+						{filteredUsers.length} of {usersResponse.total} users
 					</span>
 				)}
 			</div>

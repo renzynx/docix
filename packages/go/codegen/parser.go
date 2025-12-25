@@ -175,9 +175,6 @@ func ParseHandlers(handlerDir string) (map[string]Handler, error) {
 				RequestType:  parseRequestType(funcBody),
 			}
 
-			// Parse response type from the actual Go code
-			handler.ResponseType, handler.ResponseArr = parseResponseType(funcBody)
-
 			handlers[handlerKey] = handler
 			return true
 		})
@@ -245,89 +242,4 @@ func parseRequestType(funcBody string) string {
 		return match[1]
 	}
 	return ""
-}
-
-// parseResponseType extracts the response type from function body by analyzing
-// the actual Go types used in response.JSON calls.
-func parseResponseType(funcBody string) (string, bool) {
-	// Priority 1: Look for typed variable declarations like "resp := models.Type{...}"
-	// This catches: resp := models.PaginatedResponse[models.Series]{...}
-	respDeclPattern := regexp.MustCompile(`resp\s*:=\s*models\.([A-Za-z]+)(?:\[models\.([A-Za-z]+)\])?\s*\{`)
-	if match := respDeclPattern.FindStringSubmatch(funcBody); match != nil {
-		if match[2] != "" {
-			return match[1] + "<" + match[2] + ">", false
-		}
-		return match[1], false
-	}
-
-	// Priority 2: Look for response.JSON with models.Type{} inline
-	// This catches: response.JSON(w, http.StatusOK, models.AuthResponse{...})
-	inlineModelPattern := regexp.MustCompile(`response\.JSON\s*\(\s*w\s*,\s*http\.Status(?:OK|Created)\s*,\s*models\.([A-Za-z]+)\{`)
-	if match := inlineModelPattern.FindStringSubmatch(funcBody); match != nil {
-		return match[1], false
-	}
-
-	// Priority 3: Look for response.JSON calls and trace back variable types
-	jsonPattern := regexp.MustCompile(`response\.JSON\s*\(\s*w\s*,\s*http\.Status(?:OK|Created)\s*,\s*(\w+)\s*\)`)
-	matches := jsonPattern.FindAllStringSubmatch(funcBody, -1)
-
-	if len(matches) == 0 {
-		return "MessageResponse", false
-	}
-
-	// Get the last successful response variable name
-	lastVarName := strings.TrimSpace(matches[len(matches)-1][1])
-
-	// Check if it's a map[string]string message response
-	if lastVarName == "map[string]string" || strings.Contains(funcBody, `map[string]string{"message"`) {
-		return "MessageResponse", false
-	}
-
-	// Look for the variable declaration to find its type
-	// Pattern: varName := models.Type{...} or var varName []models.Type
-	varDeclPattern := regexp.MustCompile(lastVarName + `\s*:=\s*models\.([A-Za-z]+)(?:\[models\.([A-Za-z]+)\])?\s*\{`)
-	if match := varDeclPattern.FindStringSubmatch(funcBody); match != nil {
-		if match[2] != "" {
-			return match[1] + "<" + match[2] + ">", false
-		}
-		return match[1], false
-	}
-
-	// Pattern: var varName []models.Type (slice declaration)
-	slicePattern := regexp.MustCompile(`var\s+` + lastVarName + `\s+\[\]models\.([A-Za-z]+)`)
-	if match := slicePattern.FindStringSubmatch(funcBody); match != nil {
-		return match[1], true
-	}
-
-	// Pattern: varName := []models.Type{} (slice literal)
-	sliceLiteralPattern := regexp.MustCompile(lastVarName + `\s*:=\s*\[\]models\.([A-Za-z]+)\s*\{`)
-	if match := sliceLiteralPattern.FindStringSubmatch(funcBody); match != nil {
-		return match[1], true
-	}
-
-	// Check for common variable names that indicate types
-	typeMap := map[string]struct {
-		typ   string
-		isArr bool
-	}{
-		"sessions": {"SessionListItem", true},
-		"users":    {"User", true},
-		"roles":    {"Role", true},
-		"role":     {"Role", false},
-		"user":     {"User", false},
-		"tags":     {"Tag", true},
-		"tag":      {"Tag", false},
-		"series":   {"Series", false},
-		"chapters": {"Chapter", true},
-		"chapter":  {"Chapter", false},
-		"pages":    {"Page", true},
-		"page":     {"Page", false},
-	}
-
-	if info, ok := typeMap[lastVarName]; ok {
-		return info.typ, info.isArr
-	}
-
-	// Default to MessageResponse if we can't determine
-	return "MessageResponse", false
 }

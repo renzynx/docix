@@ -21,8 +21,6 @@ type Handler struct {
 	ReceiverType string       // e.g., "MangaPublicHandler"
 	Name         string       // e.g., "ListSeries"
 	RequestType  string       // e.g., "CreateSeriesRequest"
-	ResponseType string       // e.g., "Series"
-	ResponseArr  bool         // true if response is an array
 	PathParams   []string     // e.g., ["id", "slug"]
 	QueryParams  []QueryParam // e.g., [{Name: "page", Type: "number"}]
 }

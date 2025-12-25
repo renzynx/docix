@@ -3,9 +3,12 @@
 
 import type {
 	AssignRoleRequest,
+	AsyncBulkUploadResponse,
 	AsyncUploadResponse,
 	AuthResponse,
 	BanUserRequest,
+	Bookmark,
+	BookmarkStatusResponse,
 	ChangePasswordRequest,
 	Chapter,
 	ChapterReader,
@@ -15,9 +18,16 @@ import type {
 	CreateRoleRequest,
 	CreateSeriesRequest,
 	CreateTagRequest,
+	CurrentSessionResponse,
 	DashboardStats,
+	HealthResponse,
+	MaintenanceAction,
+	MaintenanceActionResponse,
+	MessageResponse,
+	Page,
 	PaginatedResponse,
 	ReorderPagesRequest,
+	RequestVerificationResponse,
 	RevokeSessionRequest,
 	Role,
 	Series,
@@ -25,15 +35,21 @@ import type {
 	SessionListItem,
 	SignInRequest,
 	SignUpRequest,
+	SiteSettings,
+	SystemInfo,
 	Tag,
+	ToggleBookmarkResponse,
 	UpdateChapterRequest,
 	UpdatePageRequest,
 	UpdateRoleRequest,
 	UpdateSeriesRequest,
+	UpdateSiteSettingsRequest,
 	UpdateTagRequest,
 	UpdateUserRequest,
+	UpdateUserResponse,
 	UploadStatusResponse,
 	User,
+	UserPermissionsResponse,
 	VerifyEmailRequest,
 } from "@docix/types";
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
@@ -43,44 +59,6 @@ export const api = axios.create({
 	baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
 	withCredentials: true,
 });
-
-interface MessageResponse {
-	message: string;
-}
-
-interface CurrentSessionResponse {
-	session: SessionListItem;
-	user: User;
-	permissions: string[];
-	roles: string[];
-}
-
-interface UserPermissionsResponse {
-	permissions: string[];
-	roles: string[];
-}
-
-interface UpdateUserResponse {
-	message: string;
-	email_verification_required?: boolean;
-	email_verification_token?: string;
-}
-
-interface RequestVerificationResponse {
-	message: string;
-	token: string;
-}
-
-export interface BookmarkStatusResponse {
-	bookmarked: boolean;
-	bookmark_id?: string;
-}
-
-export interface ToggleBookmarkResponse {
-	bookmarked: boolean;
-	bookmark_id?: string;
-	message: string;
-}
 
 // ============================================================================
 // Query Param Interfaces
@@ -139,6 +117,8 @@ export const queryKeys = {
 		["admin", "series", "chapters", "adminChapters", id] as const,
 	adminChapterDetail: (id: string) =>
 		["admin", "chapters", "adminChapterDetail", id] as const,
+	adminSiteSettings: ["admin", "settings"] as const,
+	adminSystemInfo: ["admin", "settings", "system"] as const,
 } as const;
 
 // ============================================================================
@@ -149,7 +129,7 @@ export const getHealthQueryOptions = (config?: AxiosRequestConfig) =>
 	queryOptions({
 		queryKey: queryKeys.health,
 		queryFn: async () => {
-			const { data } = await api.get<{ status: string }>("/health", config);
+			const { data } = await api.get<HealthResponse>("/health", config);
 			return data;
 		},
 	});
@@ -194,7 +174,7 @@ export const listBookmarksQueryOptions = (config?: AxiosRequestConfig) =>
 	queryOptions({
 		queryKey: queryKeys.bookmarks,
 		queryFn: async () => {
-			const { data } = await api.get<MessageResponse>("/bookmarks", config);
+			const { data } = await api.get<Bookmark[]>("/bookmarks", config);
 			return data;
 		},
 	});
@@ -334,7 +314,10 @@ export const adminListUsersQueryOptions = (config?: AxiosRequestConfig) =>
 	queryOptions({
 		queryKey: queryKeys.adminUsers,
 		queryFn: async () => {
-			const { data } = await api.get<User[]>("/admin/users", config);
+			const { data } = await api.get<PaginatedResponse<User>>(
+				"/admin/users",
+				config,
+			);
 			return data;
 		},
 	});
@@ -408,6 +391,27 @@ export const adminGetChapterQueryOptions = (
 		enabled: !!id,
 	});
 
+export const adminGetSiteSettingsQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminSiteSettings,
+		queryFn: async () => {
+			const { data } = await api.get<SiteSettings>("/admin/settings", config);
+			return data;
+		},
+	});
+
+export const adminGetSystemInfoQueryOptions = (config?: AxiosRequestConfig) =>
+	queryOptions({
+		queryKey: queryKeys.adminSystemInfo,
+		queryFn: async () => {
+			const { data } = await api.get<SystemInfo>(
+				"/admin/settings/system",
+				config,
+			);
+			return data;
+		},
+	});
+
 // ============================================================================
 // Mutation Functions
 // ============================================================================
@@ -416,7 +420,7 @@ export const signUp = async (
 	request: SignUpRequest,
 	config?: AxiosRequestConfig,
 ) => {
-	const { data } = await api.post<MessageResponse>(
+	const { data } = await api.post<AuthResponse>(
 		"/auth/sign-up",
 		request,
 		config,
@@ -547,7 +551,7 @@ export const adminUploadFile = async (config?: AxiosRequestConfig) => {
 };
 
 export const adminUploadMultipleFiles = async (config?: AxiosRequestConfig) => {
-	const { data } = await api.post<MessageResponse>(
+	const { data } = await api.post<AsyncBulkUploadResponse>(
 		"/admin/upload/bulk",
 		undefined,
 		config,
@@ -576,11 +580,7 @@ export const adminUpdateRole = async (
 	request: UpdateRoleRequest,
 	config?: AxiosRequestConfig,
 ) => {
-	const { data } = await api.patch<MessageResponse>(
-		`/admin/roles/${id}`,
-		request,
-		config,
-	);
+	const { data } = await api.patch<Role>(`/admin/roles/${id}`, request, config);
 	return data;
 };
 
@@ -656,11 +656,7 @@ export const adminUpdateTag = async (
 	request: UpdateTagRequest,
 	config?: AxiosRequestConfig,
 ) => {
-	const { data } = await api.patch<MessageResponse>(
-		`/admin/tags/${id}`,
-		request,
-		config,
-	);
+	const { data } = await api.patch<Tag>(`/admin/tags/${id}`, request, config);
 	return data;
 };
 
@@ -725,7 +721,7 @@ export const adminUpdateChapter = async (
 	request: UpdateChapterRequest,
 	config?: AxiosRequestConfig,
 ) => {
-	const { data } = await api.patch<MessageResponse>(
+	const { data } = await api.patch<Chapter>(
 		`/admin/chapters/${id}`,
 		request,
 		config,
@@ -749,7 +745,7 @@ export const adminAddPages = async (
 	request: CreatePagesRequest,
 	config?: AxiosRequestConfig,
 ) => {
-	const { data } = await api.post<MessageResponse>(
+	const { data } = await api.post<Page[]>(
 		`/admin/chapters/${id}/pages`,
 		request,
 		config,
@@ -775,11 +771,7 @@ export const adminUpdatePage = async (
 	request: UpdatePageRequest,
 	config?: AxiosRequestConfig,
 ) => {
-	const { data } = await api.patch<MessageResponse>(
-		`/admin/pages/${id}`,
-		request,
-		config,
-	);
+	const { data } = await api.patch<Page>(`/admin/pages/${id}`, request, config);
 	return data;
 };
 
@@ -789,6 +781,30 @@ export const adminDeletePage = async (
 ) => {
 	const { data } = await api.delete<MessageResponse>(
 		`/admin/pages/${id}`,
+		config,
+	);
+	return data;
+};
+
+export const adminUpdateSiteSettings = async (
+	request: UpdateSiteSettingsRequest,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.put<SiteSettings>(
+		"/admin/settings",
+		request,
+		config,
+	);
+	return data;
+};
+
+export const adminPerformMaintenanceAction = async (
+	request: MaintenanceAction,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<MaintenanceActionResponse>(
+		"/admin/settings/maintenance",
+		request,
 		config,
 	);
 	return data;
@@ -996,4 +1012,20 @@ export const adminUpdatePageMutationOptions = (config?: AxiosRequestConfig) =>
 export const adminDeletePageMutationOptions = (config?: AxiosRequestConfig) =>
 	mutationOptions({
 		mutationFn: (id: string) => adminDeletePage(id, config),
+	});
+
+export const adminUpdateSiteSettingsMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: (request: UpdateSiteSettingsRequest) =>
+			adminUpdateSiteSettings(request, config),
+	});
+
+export const adminPerformMaintenanceActionMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: (request: MaintenanceAction) =>
+			adminPerformMaintenanceAction(request, config),
 	});

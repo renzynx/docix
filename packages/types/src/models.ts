@@ -49,6 +49,64 @@ export interface AuthResponse {
   message: string;
   user?: User;
 }
+/**
+ * MessageResponse is a generic response with just a message
+ */
+export interface MessageResponse {
+  message: string;
+}
+/**
+ * CurrentSessionResponse is returned when getting the current session
+ */
+export interface CurrentSessionResponse {
+  session: SessionListItem;
+  user: User;
+  permissions: string[];
+  roles: string[];
+}
+/**
+ * UserPermissionsResponse is returned when getting user permissions
+ */
+export interface UserPermissionsResponse {
+  permissions: string[];
+  roles: string[];
+}
+/**
+ * UpdateUserResponse is returned when updating user profile
+ */
+export interface UpdateUserResponse {
+  message: string;
+  email_verification_required?: boolean;
+  email_verification_token?: string;
+}
+/**
+ * RequestVerificationResponse is returned when requesting email verification
+ */
+export interface RequestVerificationResponse {
+  message: string;
+  token: string;
+}
+/**
+ * BookmarkStatusResponse is returned when checking bookmark status
+ */
+export interface BookmarkStatusResponse {
+  bookmarked: boolean;
+  bookmark_id?: string;
+}
+/**
+ * ToggleBookmarkResponse is returned when toggling a bookmark
+ */
+export interface ToggleBookmarkResponse {
+  bookmarked: boolean;
+  bookmark_id?: string;
+  message: string;
+}
+/**
+ * HealthResponse is returned by the health check endpoint
+ */
+export interface HealthResponse {
+  status: string;
+}
 export interface ErrorResponse {
   error: string;
   message: string;
@@ -329,4 +387,129 @@ export interface SeriesViewCount {
   id: string;
   title: string;
   view_count: number /* int64 */;
+}
+/**
+ * SiteSettings stores all configurable site settings
+ * There should only be one document in the settings collection
+ */
+export interface SiteSettings {
+  id: string;
+  site: SiteConfig;
+  content: ContentConfig;
+  users: UserConfig;
+  integrations: IntegrationsConfig;
+  maintenance: MaintenanceConfig;
+  updated_at: string;
+}
+/**
+ * SiteConfig contains general site configuration
+ */
+export interface SiteConfig {
+  name: string;
+  description: string;
+  logo_url: string;
+  favicon_url: string;
+  default_locale: string;
+  meta_title: string;
+  meta_description: string;
+}
+/**
+ * ContentConfig contains content-related settings
+ */
+export interface ContentConfig {
+  max_upload_size_mb: number /* int */;
+  max_chapters_per_day: number /* int */;
+  allowed_image_types: string; // Comma-separated: jpg,png,webp
+  default_content_rating: string;
+  enable_comments: boolean;
+  require_moderation: boolean;
+}
+/**
+ * UserConfig contains user-related settings
+ */
+export interface UserConfig {
+  registration_open: boolean;
+  require_email_verification: boolean;
+  default_role_id: string;
+  allow_username_change: boolean;
+  min_password_length: number /* int */;
+  max_login_attempts: number /* int */;
+}
+/**
+ * IntegrationsConfig contains external service configurations
+ */
+export interface IntegrationsConfig {
+  smtp_host: string;
+  smtp_port: number /* int */;
+  smtp_username: string;
+  smtp_from_email: string;
+  smtp_from_name: string;
+  smtp_enabled: boolean;
+  cdn_enabled: boolean;
+  cdn_base_url: string;
+}
+/**
+ * MaintenanceConfig contains maintenance mode settings
+ */
+export interface MaintenanceConfig {
+  enabled: boolean;
+  message: string;
+  allowed_ips: string; // Comma-separated IPs
+  scheduled_start?: string;
+  scheduled_end?: string;
+}
+/**
+ * UpdateSiteSettingsRequest is the request body for updating site settings
+ */
+export interface UpdateSiteSettingsRequest {
+  site?: SiteConfig;
+  content?: ContentConfig;
+  users?: UserConfig;
+  integrations?: UpdateIntegrationsRequest;
+  maintenance?: MaintenanceConfig;
+}
+/**
+ * UpdateIntegrationsRequest allows partial SMTP password updates
+ */
+export interface UpdateIntegrationsRequest {
+  smtp_host?: string;
+  smtp_port?: number /* int */;
+  smtp_username?: string;
+  smtp_password?: string; // Only set if changing
+  smtp_from_email?: string;
+  smtp_from_name?: string;
+  smtp_enabled?: boolean;
+  cdn_enabled?: boolean;
+  cdn_base_url?: string;
+}
+/**
+ * MaintenanceAction represents actions that can be performed
+ */
+export interface MaintenanceAction {
+  action: string;
+}
+/**
+ * MaintenanceActionResponse is the response for maintenance actions
+ */
+export interface MaintenanceActionResponse {
+  success: boolean;
+  message: string;
+}
+/**
+ * CacheStats provides information about cache usage
+ */
+export interface CacheStats {
+  redis_connected: boolean;
+  key_count: number /* int64 */;
+  memory_usage: string;
+}
+/**
+ * SystemInfo provides system status information
+ */
+export interface SystemInfo {
+  version: string;
+  go_version: string;
+  uptime: string;
+  database_status: string;
+  cache_stats: CacheStats;
 }

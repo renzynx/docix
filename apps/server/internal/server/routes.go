@@ -12,13 +12,15 @@ import (
 	"github.com/renzynx/docix/server/internal/handler"
 	"github.com/renzynx/docix/server/internal/middleware"
 	"github.com/renzynx/docix/server/internal/rbac"
+	"github.com/renzynx/docix/server/internal/settings"
 )
 
-func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
+func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, settingsService *settings.Service) {
 	cfg := config.Get()
 
 	r.Use(chimiddleware.StripSlashes)
 	r.Use(middleware.CORS())
+	r.Use(middleware.Maintenance(settingsService))
 
 	signer := signing.NewSigner(
 		cfg.CDN.HMACSecret,
@@ -27,7 +29,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 	)
 
 	authHandler := handler.NewAuthHandler(db, rbacService)
-	adminHandler := handler.NewAdminHandler(db, rbacService)
+	adminHandler := handler.NewAdminHandler(db, rbacService, settingsService)
 	mangaHandler := handler.NewMangaHandler(db)
 	mangaAdminHandler := handler.NewMangaAdminHandler(db, signer)
 	mangaPublicHandler := handler.NewMangaPublicHandler(db, signer)
@@ -143,6 +145,22 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service) {
 		router.Route("/pages", func(r chi.Router) {
 			r.Patch("/{id}", mangaAdminHandler.UpdatePage)
 			r.Delete("/{id}", mangaAdminHandler.DeletePage)
+		})
+
+		router.Route("/settings", func(r chi.Router) {
+			r.Use(middleware.RequirePermission(rbacService, constants.PermSettingsRead))
+			r.Get("/", adminHandler.GetSiteSettings)
+			r.Get("/system", adminHandler.GetSystemInfo)
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePermission(rbacService, constants.PermSettingsUpdate))
+				r.Put("/", adminHandler.UpdateSiteSettings)
+			})
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequirePermission(rbacService, constants.PermAdminMaintenance))
+				r.Post("/maintenance", adminHandler.PerformMaintenanceAction)
+			})
 		})
 	})
 }

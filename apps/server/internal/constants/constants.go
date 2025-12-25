@@ -1,17 +1,18 @@
 package constants
 
 const (
-	CookiePrefix        = "docix_"
-	SessionCookieName   = CookiePrefix + "session"
-	DatabaseName        = "docix"
-	UsersCollection     = "users"
-	SessionsCollection  = "sessions"
-	RolesCollection     = "roles"
-	TagsCollection      = "tags"
-	SeriesCollection    = "series"
-	ChaptersCollection  = "chapters"
-	PagesCollection     = "pages"
-	BookmarksCollection = "bookmarks"
+	CookiePrefix           = "docix_"
+	SessionCookieName      = CookiePrefix + "session"
+	DatabaseName           = "docix"
+	UsersCollection        = "users"
+	SessionsCollection     = "sessions"
+	RolesCollection        = "roles"
+	TagsCollection         = "tags"
+	SeriesCollection       = "series"
+	ChaptersCollection     = "chapters"
+	PagesCollection        = "pages"
+	BookmarksCollection    = "bookmarks"
+	SiteSettingsCollection = "site_settings"
 )
 
 const (

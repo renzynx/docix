@@ -14,15 +14,16 @@ import (
 )
 
 type Database struct {
-	Client    *mongo.Client
-	Users     *mongo.Collection
-	Sessions  *mongo.Collection
-	Roles     *mongo.Collection
-	Tags      *mongo.Collection
-	Series    *mongo.Collection
-	Chapters  *mongo.Collection
-	Pages     *mongo.Collection
-	Bookmarks *mongo.Collection
+	Client       *mongo.Client
+	Users        *mongo.Collection
+	Sessions     *mongo.Collection
+	Roles        *mongo.Collection
+	Tags         *mongo.Collection
+	Series       *mongo.Collection
+	Chapters     *mongo.Collection
+	Pages        *mongo.Collection
+	Bookmarks    *mongo.Collection
+	SiteSettings *mongo.Collection
 }
 
 func New() (*Database, error) {
@@ -48,15 +49,16 @@ func New() (*Database, error) {
 	db := client.Database(constants.DatabaseName)
 
 	database := &Database{
-		Client:    client,
-		Users:     db.Collection(constants.UsersCollection),
-		Sessions:  db.Collection(constants.SessionsCollection),
-		Roles:     db.Collection(constants.RolesCollection),
-		Tags:      db.Collection(constants.TagsCollection),
-		Series:    db.Collection(constants.SeriesCollection),
-		Chapters:  db.Collection(constants.ChaptersCollection),
-		Pages:     db.Collection(constants.PagesCollection),
-		Bookmarks: db.Collection(constants.BookmarksCollection),
+		Client:       client,
+		Users:        db.Collection(constants.UsersCollection),
+		Sessions:     db.Collection(constants.SessionsCollection),
+		Roles:        db.Collection(constants.RolesCollection),
+		Tags:         db.Collection(constants.TagsCollection),
+		Series:       db.Collection(constants.SeriesCollection),
+		Chapters:     db.Collection(constants.ChaptersCollection),
+		Pages:        db.Collection(constants.PagesCollection),
+		Bookmarks:    db.Collection(constants.BookmarksCollection),
+		SiteSettings: db.Collection(constants.SiteSettingsCollection),
 	}
 
 	if err := database.createIndexes(ctx); err != nil {
