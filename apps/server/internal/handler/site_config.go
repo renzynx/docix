@@ -11,6 +11,7 @@ import (
 
 type SiteConfigProvider interface {
 	GetSiteConfig(ctx context.Context) (*models.SiteConfig, error)
+	GetMaintenanceConfig(ctx context.Context) (*models.MaintenanceConfig, error)
 }
 
 type SiteConfigHandler struct {
@@ -19,6 +20,16 @@ type SiteConfigHandler struct {
 
 func NewSiteConfigHandler(settings SiteConfigProvider) *SiteConfigHandler {
 	return &SiteConfigHandler{Settings: settings}
+}
+
+type PublicSiteConfig struct {
+	models.SiteConfig
+	Maintenance *PublicMaintenanceInfo `json:"maintenance,omitempty"`
+}
+
+type PublicMaintenanceInfo struct {
+	Enabled bool   `json:"enabled"`
+	Message string `json:"message"`
 }
 
 func (h *SiteConfigHandler) GetSiteConfig(w http.ResponseWriter, r *http.Request) {
@@ -31,5 +42,21 @@ func (h *SiteConfigHandler) GetSiteConfig(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	response.JSON(w, http.StatusOK, config)
+	maintenanceConfig, err := h.Settings.GetMaintenanceConfig(ctx)
+	if err != nil {
+		log.Warn("Failed to get maintenance config: ", err)
+	}
+
+	result := PublicSiteConfig{
+		SiteConfig: *config,
+	}
+
+	if maintenanceConfig != nil && maintenanceConfig.Enabled {
+		result.Maintenance = &PublicMaintenanceInfo{
+			Enabled: true,
+			Message: maintenanceConfig.Message,
+		}
+	}
+
+	response.JSON(w, http.StatusOK, result)
 }

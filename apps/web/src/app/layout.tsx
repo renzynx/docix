@@ -2,6 +2,7 @@ import "@docix/ui/globals.css";
 import { Toaster } from "@docix/ui/components/sonner";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { MaintenancePage } from "@/components/maintenance-page";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getSiteConfig } from "@/lib/api.server";
 import { TanstackQueryProvider } from "@/lib/tanstack-query/client";
@@ -39,27 +40,46 @@ export async function generateMetadata(): Promise<Metadata> {
 	}
 }
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	let isMaintenanceMode = false;
+	let maintenanceMessage = "";
+	let siteName = "Docix";
+
+	try {
+		const config = await getSiteConfig();
+		siteName = config.name;
+		if (config.maintenance?.enabled) {
+			isMaintenanceMode = true;
+			maintenanceMessage =
+				config.maintenance.message ||
+				"We are currently performing maintenance. Please check back soon.";
+		}
+	} catch {
+		// If we can't fetch config, continue normally
+	}
+
 	return (
 		<html lang="en" className={inter.variable} suppressHydrationWarning>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<TanstackQueryProvider>
-					<ThemeProvider
-						attribute="class"
-						defaultTheme="system"
-						enableSystem
-						disableTransitionOnChange
-					>
-						{children}
-						<Toaster richColors />
-					</ThemeProvider>
-				</TanstackQueryProvider>
+				<ThemeProvider
+					attribute="class"
+					defaultTheme="system"
+					enableSystem
+					disableTransitionOnChange
+				>
+					{isMaintenanceMode ? (
+						<MaintenancePage message={maintenanceMessage} siteName={siteName} />
+					) : (
+						<TanstackQueryProvider>{children}</TanstackQueryProvider>
+					)}
+					<Toaster richColors />
+				</ThemeProvider>
 			</body>
 		</html>
 	);

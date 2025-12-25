@@ -321,6 +321,16 @@ export interface SiteConfig {
 	meta_title: string;
 	meta_description: string;
 }
+
+export interface PublicMaintenanceInfo {
+	enabled: boolean;
+	message: string;
+}
+
+export interface PublicSiteConfig extends SiteConfig {
+	maintenance?: PublicMaintenanceInfo;
+}
+
 export interface ContentConfig {
 	max_upload_size_mb: number /* int */;
 	max_chapters_per_day: number /* int */;

@@ -1,14 +1,14 @@
 import { api } from "@docix/api";
 import type {
 	ChapterReader,
+	PublicSiteConfig,
 	SeriesWithChapters,
-	SiteConfig,
 } from "@docix/types";
 import { cache } from "react";
 import { getRequestHeaders } from "./tanstack-query/server";
 
 export const getSiteConfig = cache(async () => {
-	const { data } = await api.get<SiteConfig>("/site-config");
+	const { data } = await api.get<PublicSiteConfig>("/site-config");
 	return data;
 });
 
