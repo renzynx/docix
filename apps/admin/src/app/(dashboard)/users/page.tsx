@@ -1,4 +1,33 @@
+"use client";
+
+import type { User } from "@docix/types";
+import { Input } from "@docix/ui/components/input";
+import { Spinner } from "@docix/ui/components/spinner";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { listUsersQueryOptions } from "@/lib/api.generated";
+import { BanUserDialog, UserRolesDialog, UsersTable } from "./_components";
+
 export default function UsersPage() {
+	const [searchQuery, setSearchQuery] = useState("");
+	const [banDialogUser, setBanDialogUser] = useState<User | null>(null);
+	const [rolesDialogUser, setRolesDialogUser] = useState<User | null>(null);
+
+	const { data: users, isLoading } = useQuery(listUsersQueryOptions());
+
+	// Filter users based on search query
+	const filteredUsers = useMemo(() => {
+		if (!users) return [];
+		if (!searchQuery.trim()) return users;
+
+		const query = searchQuery.toLowerCase();
+		return users.filter(
+			(user) =>
+				user.email.toLowerCase().includes(query) ||
+				user.username?.toLowerCase().includes(query),
+		);
+	}, [users, searchQuery]);
+
 	return (
 		<div className="space-y-8">
 			<div>
@@ -7,9 +36,48 @@ export default function UsersPage() {
 					Manage user accounts and permissions.
 				</p>
 			</div>
-			<div className="rounded-lg border p-8 text-center text-muted-foreground">
-				User management coming soon.
+
+			{/* Search */}
+			<div className="flex items-center gap-4">
+				<Input
+					placeholder="Search by email or username..."
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					className="max-w-sm"
+				/>
+				{users && (
+					<span className="text-sm text-muted-foreground">
+						{filteredUsers.length} of {users.length} users
+					</span>
+				)}
 			</div>
+
+			{/* Users Table */}
+			{isLoading ? (
+				<div className="flex items-center justify-center py-12">
+					<Spinner className="size-8" />
+				</div>
+			) : (
+				<UsersTable
+					users={filteredUsers}
+					onBanUser={setBanDialogUser}
+					onManageRoles={setRolesDialogUser}
+				/>
+			)}
+
+			{/* Ban User Dialog */}
+			<BanUserDialog
+				user={banDialogUser}
+				open={!!banDialogUser}
+				onOpenChange={(open) => !open && setBanDialogUser(null)}
+			/>
+
+			{/* Manage Roles Dialog */}
+			<UserRolesDialog
+				user={rolesDialogUser}
+				open={!!rolesDialogUser}
+				onOpenChange={(open) => !open && setRolesDialogUser(null)}
+			/>
 		</div>
 	);
 }
