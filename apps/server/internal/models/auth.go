@@ -16,6 +16,12 @@ type AuthResponse struct {
 	User    *User  `json:"user,omitempty"`
 }
 
+type SignUpResponse struct {
+	Message                  string `json:"message"`
+	RequireEmailVerification bool   `json:"require_email_verification"`
+	EmailVerificationToken   string `json:"email_verification_token,omitempty"`
+}
+
 type MessageResponse struct {
 	Message string `json:"message"`
 }
@@ -91,6 +97,10 @@ type UpdateUserRequest struct {
 
 type VerifyEmailRequest struct {
 	Token string `json:"token" validate:"required"`
+}
+
+type ResendVerificationRequest struct {
+	Email string `json:"email" validate:"required,email"`
 }
 
 type ChangePasswordRequest struct {

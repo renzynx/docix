@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -9,8 +10,10 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/renzynx/docix/packages/go/redis"
 	"github.com/renzynx/docix/server/internal/auth"
+	"github.com/renzynx/docix/server/internal/config"
 	"github.com/renzynx/docix/server/internal/constants"
 	"github.com/renzynx/docix/server/internal/database"
+	"github.com/renzynx/docix/server/internal/email"
 	"github.com/renzynx/docix/server/internal/models"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/response"
@@ -26,6 +29,8 @@ type AuthHandler struct {
 	RBAC             *rbac.Service
 	Redis            *goredis.Client
 	Settings         SettingsProvider
+	Email            *email.Service
+	Config           *config.Config
 	LoginRateLimiter LoginRateLimiter
 }
 
@@ -36,18 +41,20 @@ type SettingsProvider interface {
 	GetMaxLoginAttempts(ctx context.Context) int
 }
 
-// LoginRateLimiter interface for recording failed login attempts
+// interface for recording failed login attempts
 type LoginRateLimiter interface {
 	RecordFailedAttempt(ctx context.Context, ip string) error
 	ClearAttempts(ctx context.Context, ip string) error
 }
 
-func NewAuthHandler(db *database.Database, rbacService *rbac.Service, settings SettingsProvider) *AuthHandler {
+func NewAuthHandler(db *database.Database, rbacService *rbac.Service, settings SettingsProvider, emailService *email.Service, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
 		DB:       db,
 		RBAC:     rbacService,
 		Redis:    redis.MustGetClient(),
 		Settings: settings,
+		Email:    emailService,
+		Config:   cfg,
 	}
 }
 
@@ -85,7 +92,7 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: now,
 	}
 
-	_, err = h.DB.Users.InsertOne(r.Context(), user)
+	result, err := h.DB.Users.InsertOne(r.Context(), user)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			response.Error(w, http.StatusConflict, "Email already registered")
@@ -96,9 +103,39 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusCreated, map[string]string{
-		"message": "Account created successfully",
-	})
+	requiresVerification := h.Settings.RequiresEmailVerification(r.Context())
+	resp := models.SignUpResponse{
+		Message:                  "Account created successfully",
+		RequireEmailVerification: requiresVerification,
+	}
+
+	if requiresVerification {
+		userID := result.InsertedID.(bson.ObjectID).Hex()
+		token, err := auth.GenerateEmailVerificationToken(
+			userID,
+			req.Email,
+			"verify",
+			24*time.Hour,
+		)
+		if err != nil {
+			log.Error("Failed to generate verification token: ", err)
+		} else {
+			resp.EmailVerificationToken = token
+			resp.Message = "Account created. Please verify your email to continue."
+
+			// Send verification email
+			username := user.Username
+			if username == "" {
+				username = "User"
+			}
+			verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", h.Config.FrontendURL, token)
+			if err := h.Email.SendVerificationEmail(r.Context(), req.Email, username, verificationLink); err != nil {
+				log.Warnf("Failed to send verification email: %v", err)
+			}
+		}
+	}
+
+	response.JSON(w, http.StatusCreated, resp)
 }
 
 func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {

@@ -16,6 +16,11 @@ export interface AuthResponse {
 	message: string;
 	user?: User;
 }
+export interface SignUpResponse {
+	message: string;
+	require_email_verification: boolean;
+	email_verification_token?: string;
+}
 export interface MessageResponse {
 	message: string;
 }
@@ -78,6 +83,9 @@ export interface UpdateUserRequest {
 }
 export interface VerifyEmailRequest {
 	token: string;
+}
+export interface ResendVerificationRequest {
+	email: string;
 }
 export interface ChangePasswordRequest {
 	current_password: string;

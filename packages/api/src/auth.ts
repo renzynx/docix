@@ -4,10 +4,12 @@ import type {
 	CurrentSessionResponse,
 	MessageResponse,
 	RequestVerificationResponse,
+	ResendVerificationRequest,
 	RevokeSessionRequest,
 	SessionListItem,
 	SignInRequest,
 	SignUpRequest,
+	SignUpResponse,
 	UpdateUserRequest,
 	UpdateUserResponse,
 	UserPermissionsResponse,
@@ -62,7 +64,7 @@ export const signUp = async (
 	request: SignUpRequest,
 	config?: AxiosRequestConfig,
 ) => {
-	const { data } = await api.post<MessageResponse>(
+	const { data } = await api.post<SignUpResponse>(
 		"/auth/sign-up",
 		request,
 		config,
@@ -145,6 +147,18 @@ export const requestEmailVerification = async (config?: AxiosRequestConfig) => {
 	return data;
 };
 
+export const resendVerification = async (
+	request: ResendVerificationRequest,
+	config?: AxiosRequestConfig,
+) => {
+	const { data } = await api.post<RequestVerificationResponse>(
+		"/auth/resend-verification",
+		request,
+		config,
+	);
+	return data;
+};
+
 export const revokeSession = async (
 	request: RevokeSessionRequest,
 	config?: AxiosRequestConfig,
@@ -199,6 +213,14 @@ export const requestEmailVerificationMutationOptions = (
 ) =>
 	mutationOptions({
 		mutationFn: () => requestEmailVerification(config),
+	});
+
+export const resendVerificationMutationOptions = (
+	config?: AxiosRequestConfig,
+) =>
+	mutationOptions({
+		mutationFn: (request: ResendVerificationRequest) =>
+			resendVerification(request, config),
 	});
 
 export const revokeSessionMutationOptions = (config?: AxiosRequestConfig) =>

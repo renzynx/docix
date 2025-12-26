@@ -40,6 +40,7 @@ type Config struct {
 	IsProduction    bool
 	UseSecureCookie bool
 	AuthSecret      string
+	FrontendURL     string
 	SMTP            SMTPConfig
 	Upload          UploadConfig
 	CDN             CDNConfig
@@ -72,6 +73,11 @@ func Load() *Config {
 		panic("AUTH_SECRET environment variable is required")
 	}
 
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+
 	host := os.Getenv("HOST")
 	if host == "" {
 		host = "localhost"
@@ -91,6 +97,7 @@ func Load() *Config {
 		IsProduction:    os.Getenv("GO_ENV") == "production",
 		UseSecureCookie: useSecureCookie,
 		AuthSecret:      authSecret,
+		FrontendURL:     frontendURL,
 		SMTP:            loadSMTPConfig(),
 		Upload:          loadUploadConfig(),
 		CDN:             loadCDNConfig(),

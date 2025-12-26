@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/renzynx/docix/server/internal/config"
 	"github.com/renzynx/docix/server/internal/database"
+	"github.com/renzynx/docix/server/internal/email"
 	"github.com/renzynx/docix/server/internal/rbac"
 	"github.com/renzynx/docix/server/internal/settings"
 	log "github.com/sirupsen/logrus"
@@ -23,6 +24,7 @@ type Server struct {
 	db              *database.Database
 	rbacService     *rbac.Service
 	settingsService *settings.Service
+	emailService    *email.Service
 	cfg             *config.Config
 }
 
@@ -32,15 +34,19 @@ func New(db *database.Database, rbacService *rbac.Service, cfg *config.Config) *
 	// Initialize settings service
 	settingsService := settings.NewService(db)
 
+	// Initialize email service
+	emailService := email.New(cfg, settingsService)
+
 	s := &Server{
 		router:          router,
 		db:              db,
 		rbacService:     rbacService,
 		settingsService: settingsService,
+		emailService:    emailService,
 		cfg:             cfg,
 	}
 
-	SetupRoutes(router, db, rbacService, settingsService)
+	SetupRoutes(router, db, rbacService, settingsService, emailService)
 
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),

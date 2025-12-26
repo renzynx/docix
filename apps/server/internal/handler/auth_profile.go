@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -109,6 +110,16 @@ func (h *AuthHandler) RequestEmailVerification(w http.ResponseWriter, r *http.Re
 		log.Error("Failed to generate verification token: ", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to generate verification token")
 		return
+	}
+
+	// Send verification email
+	username := user.Username
+	if username == "" {
+		username = "User"
+	}
+	verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", h.Config.FrontendURL, token)
+	if err := h.Email.SendVerificationEmail(r.Context(), user.Email, username, verificationLink); err != nil {
+		log.Warnf("Failed to send verification email: %v", err)
 	}
 
 	response.JSON(w, http.StatusOK, map[string]string{
@@ -245,5 +256,57 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	response.JSON(w, http.StatusOK, map[string]string{
 		"message": "Password changed successfully",
+	})
+}
+
+func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request) {
+	req, ok := validator.HandleRequest[models.ResendVerificationRequest](w, r)
+	if !ok {
+		return
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+
+	var user models.User
+	err := h.DB.Users.FindOne(r.Context(), bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		response.JSON(w, http.StatusOK, models.RequestVerificationResponse{
+			Message: "If an account exists with this email, a verification token has been generated",
+		})
+		return
+	}
+
+	if user.VerifiedAt != nil {
+		response.JSON(w, http.StatusOK, models.RequestVerificationResponse{
+			Message: "If an account exists with this email, a verification token has been generated",
+		})
+		return
+	}
+
+	token, err := auth.GenerateEmailVerificationToken(
+		user.ID.Hex(),
+		user.Email,
+		"verify",
+		24*time.Hour,
+	)
+	if err != nil {
+		log.Error("Failed to generate verification token: ", err)
+		response.Error(w, http.StatusInternalServerError, "Failed to generate verification token")
+		return
+	}
+
+	// Send verification email
+	username := user.Username
+	if username == "" {
+		username = "User"
+	}
+	verificationLink := fmt.Sprintf("%s/auth/verify-email?token=%s", h.Config.FrontendURL, token)
+	if err := h.Email.SendVerificationEmail(r.Context(), user.Email, username, verificationLink); err != nil {
+		log.Warnf("Failed to send verification email: %v", err)
+	}
+
+	response.JSON(w, http.StatusOK, models.RequestVerificationResponse{
+		Message: "Verification token generated",
+		Token:   token,
 	})
 }

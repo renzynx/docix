@@ -9,6 +9,7 @@ import (
 	"github.com/renzynx/docix/server/internal/config"
 	"github.com/renzynx/docix/server/internal/constants"
 	"github.com/renzynx/docix/server/internal/database"
+	"github.com/renzynx/docix/server/internal/email"
 	"github.com/renzynx/docix/server/internal/handler"
 	"github.com/renzynx/docix/server/internal/middleware"
 	"github.com/renzynx/docix/server/internal/rbac"
@@ -17,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, settingsService *settings.Service) {
+func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, settingsService *settings.Service, emailService *email.Service) {
 	cfg := config.Get()
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{
@@ -29,7 +30,8 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 	rateLimiter := middleware.NewRateLimiter(rbacService).
 		WithGlobalLimit(100, time.Minute).
 		WithRouteLimit("/auth/sign-up", 5, time.Minute, "Too many registration attempts").
-		WithRouteLimit("/auth/request-verification", 3, time.Minute, "Too many verification requests")
+		WithRouteLimit("/auth/request-verification", 3, time.Minute, "Too many verification requests").
+		WithRouteLimit("/auth/resend-verification", 3, time.Minute, "Too many verification requests")
 
 	// Login-specific rate limiter using max_login_attempts from settings
 	loginRateLimiter := middleware.NewLoginRateLimiter(rbacService, settingsService)
@@ -46,7 +48,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		time.Duration(cfg.CDN.BucketDurationSec)*time.Second,
 	)
 
-	authHandler := handler.NewAuthHandler(db, rbacService, settingsService)
+	authHandler := handler.NewAuthHandler(db, rbacService, settingsService, emailService, cfg)
 	authHandler.SetLoginRateLimiter(loginRateLimiter)
 	adminHandler := handler.NewAdminHandler(db, rbacService, settingsService)
 	mangaHandler := handler.NewMangaHandler(db)
@@ -71,6 +73,7 @@ func SetupRoutes(r *chi.Mux, db *database.Database, rbacService *rbac.Service, s
 		router.With(loginRateLimiter.Middleware()).Post("/sign-in", authHandler.SignIn)
 		router.Post("/sign-out", authHandler.SignOut)
 		router.Post("/verify-email", authHandler.VerifyEmail)
+		router.Post("/resend-verification", authHandler.ResendVerification)
 		router.Post("/guest", authHandler.GuestLogin)
 
 		router.Group(func(r chi.Router) {

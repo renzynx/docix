@@ -35,9 +35,18 @@ export const SignUpForm = () => {
 	const router = useRouter();
 	const { mutate: signUp, isPending } = useMutation({
 		...signUpMutationOptions(),
-		onSuccess: (data) => {
+		onSuccess: (data, variables) => {
 			toast.success(data.message);
-			router.push("/auth/sign-in");
+			if (data.require_email_verification) {
+				const params = new URLSearchParams();
+				if (data.email_verification_token) {
+					params.set("token", data.email_verification_token);
+				}
+				params.set("email", variables.email);
+				router.push(`/auth/verify-email?${params.toString()}`);
+			} else {
+				router.push("/auth/sign-in");
+			}
 		},
 		onError: (error) => {
 			if (error instanceof AxiosError) {
